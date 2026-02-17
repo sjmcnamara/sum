@@ -154,7 +154,7 @@ class NumiParser {
         var left = try parseUnary(&pos, tokens: tokens, lineIndex: lineIndex, allResults: allResults)
 
         while pos < tokens.count {
-            guard case .op(let op) = tokens[pos], op != .assign, op.precedence >= minPrec else {
+            guard case .op(let op) = tokens[pos], op != .assign, op != .bitwiseNot, op.precedence >= minPrec else {
                 break
             }
             pos += 1
@@ -192,6 +192,16 @@ class NumiParser {
             let val = try parsePrimary(&pos, tokens: tokens, lineIndex: lineIndex, allResults: allResults)
             if let v = val {
                 return NumiValue(-v.number, unit: v.unit)
+            }
+            return nil
+        }
+
+        // Bitwise NOT
+        if case .op(.bitwiseNot) = tokens[pos] {
+            pos += 1
+            let val = try parsePrimary(&pos, tokens: tokens, lineIndex: lineIndex, allResults: allResults)
+            if let v = val {
+                return NumiValue(Double(~Int(v.number)), unit: v.unit)
             }
             return nil
         }
@@ -316,6 +326,22 @@ class NumiParser {
                 return NumiValue(.pi)
             case .e:
                 return NumiValue(M_E)
+            case .tau:
+                return NumiValue(.pi * 2)
+            case .phi:
+                return NumiValue(1.6180339887498948)
+            case .speedoflight:
+                return NumiValue(299_792_458)
+            case .gravity:
+                return NumiValue(6.67430e-11)
+            case .avogadro:
+                return NumiValue(6.02214076e23)
+            case .planck:
+                return NumiValue(6.62607015e-34)
+            case .boltzmann:
+                return NumiValue(1.380649e-23)
+            case .echarge:
+                return NumiValue(1.602176634e-19)
             case .today:
                 let cal = Calendar.current
                 let start = cal.startOfDay(for: Date())
@@ -472,6 +498,10 @@ class NumiParser {
 
         case .assign:
             return r
+
+        case .bitwiseNot:
+            // Unary — handled in parseUnary(), should not reach here
+            return l
         }
     }
 

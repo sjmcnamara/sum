@@ -15,6 +15,7 @@ struct NumiTextEditor: UIViewRepresentable {
     var variableColor: UIColor
     var keywordColor: UIColor
     var functionColor: UIColor
+    var commentColor: UIColor
     var backgroundColor: UIColor
     var font: UIFont
 
@@ -30,6 +31,7 @@ struct NumiTextEditor: UIViewRepresentable {
         view.variableColor = variableColor
         view.keywordColor = keywordColor
         view.functionColor = functionColor
+        view.commentColor = commentColor
         view.textView.backgroundColor = backgroundColor
         view.textView.tintColor = resultColor // cursor color
         view.textView.autocorrectionType = .no
@@ -53,6 +55,7 @@ struct NumiTextEditor: UIViewRepresentable {
         uiView.variableColor = variableColor
         uiView.keywordColor = keywordColor
         uiView.functionColor = functionColor
+        uiView.commentColor = commentColor
         uiView.textView.backgroundColor = backgroundColor
         uiView.resultColor = resultColor
         uiView.formattingConfig = formattingConfig
@@ -97,6 +100,7 @@ class NumiTextEditorView: UIView {
     var variableColor: UIColor = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)
     var keywordColor: UIColor = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
     var functionColor: UIColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
+    var commentColor: UIColor = UIColor(white: 0.35, alpha: 0.8)
     var formattingConfig: FormattingConfig = .default
 
     private static let gutterWidth: CGFloat = 32
@@ -459,6 +463,7 @@ class NumiTextEditorView: UIView {
         case .keyword: return keywordColor
         case .function: return functionColor
         case .variable: return variableColor
+        case .comment: return commentColor
         case .number, .op, .unit, .plain: return nil  // use default text color
         }
     }

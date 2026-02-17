@@ -216,6 +216,15 @@ enum NumiUnit: Equatable {
     // Angle
     case radian, degree
 
+    // Speed
+    case metersPerSecond, kilometersPerHour, milesPerHour, knot, feetPerSecond
+
+    // Pressure
+    case pascal, kilopascal, bar, atmosphere, psi, mmHg, torr
+
+    // Energy
+    case joule, kilojoule, calorie, kilocalorie, wattHour, kilowattHour, btu, electronvolt
+
     // CSS
     case pixel, point, em
 
@@ -294,6 +303,26 @@ enum NumiUnit: Equatable {
         case .gigabit: return "Gb"
         case .radian: return "rad"
         case .degree: return "°"
+        case .metersPerSecond: return "m/s"
+        case .kilometersPerHour: return "km/h"
+        case .milesPerHour: return "mph"
+        case .knot: return "kn"
+        case .feetPerSecond: return "ft/s"
+        case .pascal: return "Pa"
+        case .kilopascal: return "kPa"
+        case .bar: return "bar"
+        case .atmosphere: return "atm"
+        case .psi: return "psi"
+        case .mmHg: return "mmHg"
+        case .torr: return "Torr"
+        case .joule: return "J"
+        case .kilojoule: return "kJ"
+        case .calorie: return "cal"
+        case .kilocalorie: return "kcal"
+        case .wattHour: return "Wh"
+        case .kilowattHour: return "kWh"
+        case .btu: return "BTU"
+        case .electronvolt: return "eV"
         case .pixel: return "px"
         case .point: return "pt"
         case .em: return "em"
@@ -327,6 +356,12 @@ enum NumiUnit: Equatable {
             return .data
         case .radian, .degree:
             return .angle
+        case .metersPerSecond, .kilometersPerHour, .milesPerHour, .knot, .feetPerSecond:
+            return .speed
+        case .pascal, .kilopascal, .bar, .atmosphere, .psi, .mmHg, .torr:
+            return .pressure
+        case .joule, .kilojoule, .calorie, .kilocalorie, .wattHour, .kilowattHour, .btu, .electronvolt:
+            return .energy
         case .pixel, .point, .em:
             return .css
         case .currency:
@@ -414,6 +449,32 @@ enum NumiUnit: Equatable {
         case .radian: return 1
         case .degree: return .pi / 180
 
+        // Speed -> meters per second
+        case .metersPerSecond: return 1
+        case .kilometersPerHour: return 1.0 / 3.6
+        case .milesPerHour: return 0.44704
+        case .knot: return 0.514444
+        case .feetPerSecond: return 0.3048
+
+        // Pressure -> pascals
+        case .pascal: return 1
+        case .kilopascal: return 1000
+        case .bar: return 100_000
+        case .atmosphere: return 101_325
+        case .psi: return 6894.76
+        case .mmHg: return 133.322
+        case .torr: return 133.322
+
+        // Energy -> joules
+        case .joule: return 1
+        case .kilojoule: return 1000
+        case .calorie: return 4.184
+        case .kilocalorie: return 4184
+        case .wattHour: return 3600
+        case .kilowattHour: return 3_600_000
+        case .btu: return 1055.06
+        case .electronvolt: return 1.602176634e-19
+
         // CSS -> pixels (default 96 ppi)
         case .pixel: return 1
         case .point: return 96.0 / 72.0
@@ -428,7 +489,7 @@ enum NumiUnit: Equatable {
 }
 
 enum UnitCategory {
-    case length, weight, temperature, area, volume, time, data, angle, css, currency
+    case length, weight, temperature, area, volume, time, data, angle, speed, pressure, energy, css, currency
 }
 
 // MARK: - Token Types
@@ -472,6 +533,7 @@ enum Operator: String, Equatable {
     case bitwiseAnd = "&"
     case bitwiseOr = "|"
     case bitwiseXor = "xor"
+    case bitwiseNot = "~"
     case shiftLeft = "<<"
     case shiftRight = ">>"
     case assign = "="
@@ -485,7 +547,7 @@ enum Operator: String, Equatable {
         case .shiftLeft, .shiftRight: return 4
         case .add, .subtract: return 5
         case .multiply, .divide, .modulo: return 6
-        case .power: return 7
+        case .power, .bitwiseNot: return 7
         }
     }
 }
@@ -510,6 +572,15 @@ enum Keyword: String, Equatable {
     case avg = "avg"
     case pi = "pi"
     case e = "e"
+    // Scientific & mathematical constants
+    case speedoflight = "speedoflight"
+    case gravity = "gravity"
+    case avogadro = "avogadro"
+    case planck = "planck"
+    case boltzmann = "boltzmann"
+    case echarge = "echarge"
+    case phi = "phi"
+    case tau = "tau"
 }
 
 // MARK: - Line Result

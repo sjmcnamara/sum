@@ -8,6 +8,7 @@ enum TokenHighlightKind: Equatable {
     case number     // numeric literals (including hex/bin/oct)
     case op         // operators (+, -, *, /, =, etc.)
     case unit       // units (km, kg, USD, etc.)
+    case comment    // comments (// or #)
     case plain      // whitespace, parens, commas, unrecognized
 }
 
@@ -23,6 +24,32 @@ struct Tokenizer {
     // MARK: - Unit Lookup
 
     static let unitMap: [(String, NumiUnit)] = [
+        // Speed (before length to match "meters per second" before "meters")
+        ("meters per second", .metersPerSecond), ("mps", .metersPerSecond),
+        ("kilometers per hour", .kilometersPerHour), ("kph", .kilometersPerHour), ("kmh", .kilometersPerHour),
+        ("miles per hour", .milesPerHour), ("mph", .milesPerHour),
+        ("feet per second", .feetPerSecond), ("fps", .feetPerSecond),
+        ("knots", .knot), ("knot", .knot), ("kn", .knot),
+
+        // Pressure
+        ("kilopascals", .kilopascal), ("kilopascal", .kilopascal), ("kpa", .kilopascal),
+        ("pascals", .pascal), ("pascal", .pascal), ("pa", .pascal),
+        ("atmospheres", .atmosphere), ("atmosphere", .atmosphere), ("atm", .atmosphere),
+        ("bars", .bar), ("bar", .bar),
+        ("psi", .psi),
+        ("mmhg", .mmHg),
+        ("torr", .torr),
+
+        // Energy (longer entries first)
+        ("kilocalories", .kilocalorie), ("kilocalorie", .kilocalorie), ("kcal", .kilocalorie),
+        ("calories", .calorie), ("calorie", .calorie), ("cal", .calorie),
+        ("kilojoules", .kilojoule), ("kilojoule", .kilojoule), ("kj", .kilojoule),
+        ("joules", .joule), ("joule", .joule), ("j", .joule),
+        ("kilowatt hours", .kilowattHour), ("kilowatt hour", .kilowattHour), ("kwh", .kilowattHour),
+        ("watt hours", .wattHour), ("watt hour", .wattHour), ("wh", .wattHour),
+        ("btus", .btu), ("btu", .btu),
+        ("electronvolts", .electronvolt), ("electronvolt", .electronvolt), ("ev", .electronvolt),
+
         // Length
         ("kilometers", .kilometer), ("kilometer", .kilometer), ("km", .kilometer),
         ("meters", .meter), ("meter", .meter), ("m", .meter),
@@ -183,6 +210,13 @@ struct Tokenizer {
         while i < input.endIndex {
             let ch = input[i]
 
+            // Comments: // or # stop tokenizing the rest of the line
+            if ch == "#" { break }
+            if ch == "/" {
+                let next = input.index(after: i)
+                if next < input.endIndex && input[next] == "/" { break }
+            }
+
             // Skip whitespace
             if ch.isWhitespace {
                 i = input.index(after: i)
@@ -325,6 +359,19 @@ struct Tokenizer {
         while i < input.endIndex {
             let ch = input[i]
 
+            // Comments: // or # emit a comment range and stop
+            if ch == "#" {
+                ranges.append(TokenRange(kind: .comment, range: nsRange(from: i, to: input.endIndex)))
+                break
+            }
+            if ch == "/" {
+                let next = input.index(after: i)
+                if next < input.endIndex && input[next] == "/" {
+                    ranges.append(TokenRange(kind: .comment, range: nsRange(from: i, to: input.endIndex)))
+                    break
+                }
+            }
+
             // Skip whitespace (no range emitted)
             if ch.isWhitespace {
                 i = input.index(after: i)
@@ -422,6 +469,8 @@ struct Tokenizer {
                 case .function: kind = .function
                 case .variable: kind = .variable
                 case .unit: kind = .unit
+                case .op(let opVal) where opVal == .modulo || opVal == .bitwiseXor || opVal == .bitwiseNot:
+                    kind = .keyword  // highlight word operators distinctly
                 case .op: kind = .op
                 case .word: kind = .plain
                 default: kind = .plain
@@ -552,6 +601,7 @@ struct Tokenizer {
         case "&": return (.bitwiseAnd, next)
         case "|": return (.bitwiseOr, next)
         case "=": return (.assign, next)
+        case "~": return (.bitwiseNot, next)
         case "<":
             if next < input.endIndex && input[next] == "<" {
                 return (.shiftLeft, input.index(after: next))
@@ -597,6 +647,14 @@ struct Tokenizer {
         case "avg": return (.keyword(.avg), i)
         case "pi": return (.keyword(.pi), i)
         case "e": return (.keyword(.e), i)
+        case "speedoflight", "lightspeed": return (.keyword(.speedoflight), i)
+        case "gravity": return (.keyword(.gravity), i)
+        case "avogadro", "na": return (.keyword(.avogadro), i)
+        case "planck": return (.keyword(.planck), i)
+        case "boltzmann": return (.keyword(.boltzmann), i)
+        case "echarge": return (.keyword(.echarge), i)
+        case "phi", "golden": return (.keyword(.phi), i)
+        case "tau": return (.keyword(.tau), i)
         default: break
         }
 
@@ -623,6 +681,7 @@ struct Tokenizer {
             return (.word(word), i)
         case "mod": return (.op(.modulo), i)
         case "xor": return (.op(.bitwiseXor), i)
+        case "not": return (.op(.bitwiseNot), i)
         default: break
         }
 
