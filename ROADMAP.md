@@ -23,11 +23,17 @@
 - Energy units (joule, kilojoule, calorie, kilocalorie, watt-hour, kilowatt-hour, BTU, electronvolt)
 - Word operators (mod, xor, not) highlighted as keywords
 
+### v1.4.0 — NL Queries & Smart Suggestions
+- Natural language queries: split bills, tip/tax, compound expressions
+- Smart suggestions: autocomplete toolbar chips for functions, keywords, units, currencies, variables
+- Compound speed unit syntax: `km/h`, `m/s`, `miles/h`, `ft/s`
+- Fix: `speedoflight` now carries m/s unit for proper conversions
+
 ---
 
 ## Upcoming
 
-### v1.4 — Sharing & Export
+### v1.5 — Sharing & Export
 - Share sheet — export a note as plain text or formatted image
 - Copy all results — one-tap copy of the full note with results
 - Import/export notes — share `.sum` files between devices
@@ -37,8 +43,6 @@
 ### v2.0 — Intelligence
 - Custom functions — `f(x) = x^2 + 3x`
 - Conditional expressions — `if price > 100 then "expensive" else "cheap"`
-- Natural language queries — `what's 20% tip on $85 split 3 ways`
-- Smart suggestions — autocomplete units, currencies, variables
 - Frequently used conversions — learn from usage patterns
 - Spotlight integration — type expressions in iOS search
 - Siri Shortcuts — "Hey Siri, what's 100 USD in EUR"

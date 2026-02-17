@@ -16,16 +16,19 @@ Inspired by [Numi](https://numi.app/) for macOS.
 - **Number formats** - hex (`0xFF`), binary (`0b1010`), octal (`0o77`)
 - **Functions** - `sqrt`, `abs`, `log`, `ln`, `sin`, `cos`, `tan`, `round`, `ceil`, `floor`, `fact`
 - **Percentage arithmetic** - `$100 + 15%`, `25% off 200`, `$50 as a % of $200`
+- **Split bills** - `€200 split 4 ways`, `split £120 between 4 people`
+- **Tip/tax** - `20% tip on $85`, `8% tax on £50`, `15% tip on €90 split 3 ways`
 - **Display conversions** - `255 in hex`, `10 in binary`
 - **Comments** - `// line comment` or `# hash comment` (inline too: `5 + 3 // note`)
 - **Constants** - `pi`, `e`, `tau`, `phi`, `speedoflight`, `avogadro`, `planck`, `boltzmann`, `gravity`, `echarge`
 - **Bitwise operators** - AND (`&`), OR (`|`), XOR (`xor`), NOT (`~` / `not`), shifts (`<<`, `>>`)
-- **Speed units** - `60 mph in kph`, `100 knots in mps`
+- **Speed units** - `60 mph in kph`, `100 km/h in mph`, `10 m/s in km/h`
 - **Pressure units** - `1 atm in psi`, `100 kpa in bar`
 - **Energy units** - `1000 cal in kcal`, `1 kwh in joules`
 - **Formatting controls** - thousands separator toggle, decimal precision (auto/2/4/6)
 - **Syntax highlighting** - keywords, functions, variables, comments colored distinctly
 - **Line numbers** - optional gutter display
+- **Smart suggestions** - autocomplete chips in keyboard toolbar for functions, units, currencies, variables
 - **Tap to copy** - tap any result or the grand total to copy
 - **Persistence** - notes, settings, and current page saved across app launches
 
@@ -94,6 +97,7 @@ Sum/
     Services/
       CurrencyService.swift           # Fiat + crypto rate fetching
       NoteStorage.swift               # UserDefaults persistence
+      SuggestionEngine.swift          # Autocomplete prefix matching engine
   Resources/
     Assets.xcassets/                   # App icon and accent color
 SumTests/
@@ -102,6 +106,8 @@ SumTests/
   TokenRangeTests.swift               # Syntax highlighting range tests
   AppSettingsTests.swift              # Settings persistence tests
   PowerFeatureTests.swift             # Comments, constants, NOT, unit tests
+  NaturalLanguageTests.swift          # Split, tip/tax, compound NL queries
+  SuggestionEngineTests.swift         # Autocomplete prefix matching tests
 ```
 
 ## Architecture

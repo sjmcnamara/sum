@@ -1,5 +1,22 @@
 # Changelog
 
+## [Sum 1.4.0](https://github.com/sjmcnamara/sum/releases/tag/v1.4.0) (2026-02-17)
+
+- Natural language queries
+  - Split bills: `€200 split 4 ways`, `split £120 between 4 people`, `$90 split among 3`
+  - Tip/tax: `20% tip on $85`, `8% tax on £50` (tip/tax as noise words after %)
+  - Compound: `15% tip on €90 split 3 ways` → €34.50
+  - Noise stripping: `whats 20% tip on $85`, `what is €200 split 4 ways`
+- Smart suggestions (autocomplete)
+  - Toolbar chips appear as you type partial words (2+ chars)
+  - Sources: functions, keywords, units, currencies, user-defined variables
+  - Tap a chip to complete the word; operator toolbar returns when not typing
+  - Case-insensitive prefix matching, sorted by category priority
+- Bug fixes
+  - `speedoflight` now carries m/s unit so conversions work (`speedoflight in km/h`)
+  - Compound speed unit syntax: `km/h`, `m/s`, `miles/h`, `ft/s` now tokenized correctly
+- 28 new tests (172 total, passing on both Xcode 16.1 and 26.2)
+
 ## [Sum 1.3.0](https://github.com/sjmcnamara/sum/releases/tag/v1.3.0) (2026-02-17)
 
 - Power features

@@ -80,57 +80,66 @@ class NumiParser {
     // MARK: - Core Evaluation
 
     private func evaluate(_ tokens: [Token], lineIndex: Int, allResults: [LineResult]) throws -> NumiValue? {
+        // Strip leading noise words ("what", "is", "whats") for natural language queries
+        let effectiveTokens = stripLeadingNoise(tokens)
+        guard !effectiveTokens.isEmpty else { return nil }
+
         var pos = 0
 
         func peek() -> Token? {
-            pos < tokens.count ? tokens[pos] : nil
+            pos < effectiveTokens.count ? effectiveTokens[pos] : nil
         }
 
         func advance() -> Token? {
-            guard pos < tokens.count else { return nil }
-            let t = tokens[pos]
+            guard pos < effectiveTokens.count else { return nil }
+            let t = effectiveTokens[pos]
             pos += 1
             return t
         }
 
-        // Check for percentage pattern: "X% of/on/off Y"
-        if let result = tryPercentagePattern(tokens, lineIndex: lineIndex, allResults: allResults) {
+        // Check for split pattern: "$200 split 4 ways", "20% tip on $85 split 3 ways"
+        if let result = try trySplitPattern(effectiveTokens, lineIndex: lineIndex, allResults: allResults) {
             return result
         }
 
-        let result = try parseExpression(&pos, tokens: tokens, lineIndex: lineIndex, allResults: allResults)
+        // Check for percentage pattern: "X% of/on/off Y"
+        if let result = tryPercentagePattern(effectiveTokens, lineIndex: lineIndex, allResults: allResults) {
+            return result
+        }
+
+        let result = try parseExpression(&pos, tokens: effectiveTokens, lineIndex: lineIndex, allResults: allResults)
 
         // Check for unit conversion: "... in unit" or "... to unit"
-        if pos < tokens.count {
-            if case .keyword(let kw) = tokens[pos], [.in, .into, .as, .to].contains(kw) {
+        if pos < effectiveTokens.count {
+            if case .keyword(let kw) = effectiveTokens[pos], [.in, .into, .as, .to].contains(kw) {
                 pos += 1
-                if pos < tokens.count {
+                if pos < effectiveTokens.count {
                     // Check for "sci" (scientific notation)
-                    if case .variable(let name) = tokens[pos], name.lowercased() == "sci" {
+                    if case .variable(let name) = effectiveTokens[pos], name.lowercased() == "sci" {
                         if let r = result {
                             return NumiValue(r.number, unit: .scientific)
                         }
                     }
                     // Check for "hex"
-                    if case .variable(let name) = tokens[pos], name.lowercased() == "hex" {
+                    if case .variable(let name) = effectiveTokens[pos], name.lowercased() == "hex" {
                         if let r = result {
                             return NumiValue(r.number, unit: .hex)
                         }
                     }
                     // Check for "binary" / "bin"
-                    if case .variable(let name) = tokens[pos], ["binary", "bin"].contains(name.lowercased()) {
+                    if case .variable(let name) = effectiveTokens[pos], ["binary", "bin"].contains(name.lowercased()) {
                         if let r = result {
                             return NumiValue(r.number, unit: .binary)
                         }
                     }
                     // Check for "octal" / "oct"
-                    if case .variable(let name) = tokens[pos], ["octal", "oct"].contains(name.lowercased()) {
+                    if case .variable(let name) = effectiveTokens[pos], ["octal", "oct"].contains(name.lowercased()) {
                         if let r = result {
                             return NumiValue(r.number, unit: .octal)
                         }
                     }
 
-                    if case .unit(let targetUnit) = tokens[pos] {
+                    if case .unit(let targetUnit) = effectiveTokens[pos] {
                         if let r = result {
                             return try convertUnit(r, to: targetUnit)
                         }
@@ -235,6 +244,11 @@ class NumiParser {
 
                 // Percentage with operator: "10% of 200"
                 if u == .percent {
+                    // Skip noise words "tip"/"tax" after percentage
+                    if pos < tokens.count, case .keyword(let nkw) = tokens[pos],
+                       nkw == .tip || nkw == .tax {
+                        pos += 1
+                    }
                     if pos < tokens.count, case .keyword(let kw) = tokens[pos] {
                         switch kw {
                         case .of:
@@ -331,7 +345,7 @@ class NumiParser {
             case .phi:
                 return NumiValue(1.6180339887498948)
             case .speedoflight:
-                return NumiValue(299_792_458)
+                return NumiValue(299_792_458, unit: .metersPerSecond)
             case .gravity:
                 return NumiValue(6.67430e-11)
             case .avogadro:
@@ -422,6 +436,123 @@ class NumiParser {
             }
         }
         return nil
+    }
+
+    // MARK: - Split Pattern
+
+    /// Matches patterns like "$200 split 4 ways", "split $120 between 4 people",
+    /// "20% tip on $85 split 3 ways", "what's $200 split 4 ways"
+    private func trySplitPattern(_ tokens: [Token], lineIndex: Int, allResults: [LineResult]) throws -> NumiValue? {
+        // Find the position of .keyword(.split)
+        var splitPos: Int?
+        for i in 0..<tokens.count {
+            if case .keyword(.split) = tokens[i] {
+                splitPos = i
+                break
+            }
+        }
+        guard let sp = splitPos else { return nil }
+
+        // Extract the value part and the divisor
+        var valueTokens: [Token]
+        var divisorTokens: [Token]
+
+        if sp == 0 {
+            // "split $120 between 4 people" or "split $120 4 ways"
+            let afterSplit = Array(tokens[(sp + 1)...])
+            let stripped = stripLeadingNoise(afterSplit)
+            // Find the divisor: look for between/among, or the last number
+            let (valToks, divToks) = splitValueAndDivisor(stripped)
+            valueTokens = valToks
+            divisorTokens = divToks
+        } else {
+            // "$200 split 4 ways" or "20% tip on $85 split 3 ways"
+            valueTokens = stripLeadingNoise(Array(tokens[0..<sp]))
+            let afterSplit = Array(tokens[(sp + 1)...])
+            // Skip optional "between"/"among" after split
+            divisorTokens = skipBetweenAmong(afterSplit)
+        }
+
+        // Strip trailing noise (ways, people)
+        divisorTokens = stripTrailingNoise(divisorTokens)
+
+        guard !valueTokens.isEmpty, !divisorTokens.isEmpty else { return nil }
+
+        // Parse the divisor
+        var dPos = 0
+        let divisor = try parseExpression(&dPos, tokens: divisorTokens, lineIndex: lineIndex, allResults: allResults)
+        guard let d = divisor, d.number != 0 else {
+            if let d = divisor, d.number == 0 {
+                throw NumiError.divisionByZero
+            }
+            return nil
+        }
+
+        // Parse the value expression (may contain tip/tax patterns)
+        let value = try evaluate(valueTokens, lineIndex: lineIndex, allResults: allResults)
+        guard let v = value else { return nil }
+
+        return NumiValue(v.number / d.number, unit: v.unit)
+    }
+
+    /// Strips leading noise words: "what", "is", single-letter variable "s" (from "what's")
+    private func stripLeadingNoise(_ tokens: [Token]) -> [Token] {
+        var i = 0
+        while i < tokens.count {
+            switch tokens[i] {
+            case .keyword(.what), .keyword(.is):
+                i += 1
+            case .variable(let v) where v.lowercased() == "s" || v.lowercased() == "whats":
+                i += 1
+            default:
+                return Array(tokens[i...])
+            }
+        }
+        return []
+    }
+
+    /// For "split VALUE between N people" pattern: splits after between/among keyword
+    private func splitValueAndDivisor(_ tokens: [Token]) -> ([Token], [Token]) {
+        for i in 0..<tokens.count {
+            if case .keyword(let kw) = tokens[i], kw == .between || kw == .among {
+                let valuePart = Array(tokens[0..<i])
+                let divisorPart = Array(tokens[(i + 1)...])
+                return (valuePart, stripTrailingNoise(divisorPart))
+            }
+        }
+        // No between/among: last number is the divisor, rest is value
+        // e.g., "split $120 4 ways" → value=$120, divisor=4
+        // Find the last number token
+        for i in stride(from: tokens.count - 1, through: 0, by: -1) {
+            if case .number = tokens[i] {
+                let valuePart = Array(tokens[0..<i])
+                let divisorPart = [tokens[i]]
+                return (valuePart, divisorPart)
+            }
+        }
+        return (tokens, [])
+    }
+
+    /// Skips optional "between"/"among" at the start of tokens
+    private func skipBetweenAmong(_ tokens: [Token]) -> [Token] {
+        guard let first = tokens.first else { return tokens }
+        if case .keyword(let kw) = first, kw == .between || kw == .among {
+            return Array(tokens.dropFirst())
+        }
+        return tokens
+    }
+
+    /// Strips trailing noise: "ways", "people"
+    private func stripTrailingNoise(_ tokens: [Token]) -> [Token] {
+        var result = tokens
+        while let last = result.last {
+            if case .keyword(let kw) = last, kw == .ways || kw == .people {
+                result.removeLast()
+            } else {
+                break
+            }
+        }
+        return result
     }
 
     // MARK: - Apply Operator
