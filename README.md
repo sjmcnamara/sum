@@ -17,7 +17,17 @@ Inspired by [Numi](https://numi.app/) for macOS.
 - **Functions** - `sqrt`, `abs`, `log`, `ln`, `sin`, `cos`, `tan`, `round`, `ceil`, `floor`, `fact`
 - **Percentage arithmetic** - `$100 + 15%`, `25% off 200`, `$50 as a % of $200`
 - **Display conversions** - `255 in hex`, `10 in binary`
-- **Persistence** - notes and current page saved across app launches
+- **Comments** - `// line comment` or `# hash comment` (inline too: `5 + 3 // note`)
+- **Constants** - `pi`, `e`, `tau`, `phi`, `speedoflight`, `avogadro`, `planck`, `boltzmann`, `gravity`, `echarge`
+- **Bitwise operators** - AND (`&`), OR (`|`), XOR (`xor`), NOT (`~` / `not`), shifts (`<<`, `>>`)
+- **Speed units** - `60 mph in kph`, `100 knots in mps`
+- **Pressure units** - `1 atm in psi`, `100 kpa in bar`
+- **Energy units** - `1000 cal in kcal`, `1 kwh in joules`
+- **Formatting controls** - thousands separator toggle, decimal precision (auto/2/4/6)
+- **Syntax highlighting** - keywords, functions, variables, comments colored distinctly
+- **Line numbers** - optional gutter display
+- **Tap to copy** - tap any result or the grand total to copy
+- **Persistence** - notes, settings, and current page saved across app launches
 
 ## Requirements
 
@@ -59,23 +69,39 @@ XCODE=new ./scripts/build.sh test    # Xcode 26.2 (iOS 26)
 ## Project Structure
 
 ```
-project.yml              # XcodeGen project spec
+project.yml                           # XcodeGen project spec
+scripts/build.sh                      # Build, test, clean automation
 Sum/
   Sources/
-    App/NumiApp.swift             # @main entry point
-    Models/NumiTypes.swift        # Value types, units, tokens
-    Parser/Tokenizer.swift        # Lexer (text -> tokens)
-    Parser/NumiParser.swift       # Expression evaluator
-    Views/CalculatorView.swift    # Main UI (green-on-black theme)
-    Views/NumiTextEditor.swift    # UITextView wrapper with syntax highlighting
-    Views/NotesListView.swift     # Note management sheet
-    ViewModels/CalculatorViewModel.swift  # State management
-    Services/CurrencyService.swift        # Fiat + crypto rate fetching
-    Services/NoteStorage.swift            # UserDefaults persistence
+    App/NumiApp.swift                 # @main entry point
+    Models/
+      NumiTypes.swift                 # Value types, units, tokens, operators
+      FormattingConfig.swift          # Immutable formatting preferences
+      AppSettings.swift               # UserDefaults-backed settings singleton
+    Parser/
+      Tokenizer.swift                 # Lexer (text -> tokens + highlight ranges)
+      NumiParser.swift                # Precedence-climbing expression evaluator
+    Views/
+      CalculatorView.swift            # Main UI (green-on-black theme)
+      NumiTextEditor.swift            # UITextView wrapper with syntax highlighting
+      LineNumberView.swift            # Optional line number gutter
+      SettingsView.swift              # Formatting, editor, and info settings
+      NotesListView.swift             # Note management sheet
+      AboutView.swift                 # Version and app info
+      LicenseView.swift               # MIT license display
+    ViewModels/
+      CalculatorViewModel.swift       # State management + Combine bindings
+    Services/
+      CurrencyService.swift           # Fiat + crypto rate fetching
+      NoteStorage.swift               # UserDefaults persistence
   Resources/
-    Assets.xcassets/              # App icon and accent color
+    Assets.xcassets/                   # App icon and accent color
 SumTests/
-  SumTests.swift                  # 73 unit tests
+  SumTests.swift                      # Core parser and evaluator tests
+  FormattingConfigTests.swift         # Formatting configuration tests
+  TokenRangeTests.swift               # Syntax highlighting range tests
+  AppSettingsTests.swift              # Settings persistence tests
+  PowerFeatureTests.swift             # Comments, constants, NOT, unit tests
 ```
 
 ## Architecture
@@ -83,7 +109,8 @@ SumTests/
 - **SwiftUI + UIKit hybrid** - UIViewRepresentable wrapping UITextView for rich text editing with NSAttributedString syntax highlighting
 - **Tokenizer/Parser** - hand-written lexer and precedence-climbing expression evaluator
 - **Currency rates** - fetched in parallel from open.er-api.com (fiat) and CoinGecko (crypto), with offline fallback rates
-- **Persistence** - UserDefaults with JSON-encoded notes
+- **Settings** - AppSettings ObservableObject with Combine, producing immutable FormattingConfig snapshots
+- **Persistence** - UserDefaults with JSON-encoded notes and settings
 
 ## License
 
