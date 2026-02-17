@@ -341,6 +341,24 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(results[0].value?.number ?? 0, 100_000_000, accuracy: 1)
     }
 
+    func testCurrencyCodeCaseInsensitive() {
+        // "usd" should work the same as "USD"
+        let lower = parser.evaluateAll("100 eur in usd")
+        let upper = parser.evaluateAll("100 EUR in USD")
+        XCTAssertNotNil(lower[0].value)
+        XCTAssertNotNil(upper[0].value)
+        XCTAssertEqual(lower[0].value?.number ?? 0, upper[0].value?.number ?? -1, accuracy: 0.01)
+    }
+
+    func testCryptoCaseInsensitive() {
+        // "btc" should work the same as "BTC"
+        let lower = parser.evaluateAll("4 btc as usd")
+        let upper = parser.evaluateAll("4 BTC as USD")
+        XCTAssertNotNil(lower[0].value)
+        XCTAssertNotNil(upper[0].value)
+        XCTAssertEqual(lower[0].value?.number ?? 0, upper[0].value?.number ?? -1, accuracy: 0.01)
+    }
+
     // MARK: - Percentages
 
     func testPercentageOf() {

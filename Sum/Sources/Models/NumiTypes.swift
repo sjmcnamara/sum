@@ -12,13 +12,19 @@ struct NumiValue: Equatable {
         self.unit = unit
     }
 
+    /// Formats with default settings (backward compatible)
     var formatted: String {
+        formatted(with: .default)
+    }
+
+    /// Formats with the given configuration
+    func formatted(with config: FormattingConfig) -> String {
         if let unit = unit {
             switch unit {
             case .currency(let code):
-                return formatCurrency(number, code: code)
+                return formatCurrency(number, code: code, config: config)
             case .percent:
-                return "\(formatNumber(number))%"
+                return "\(formatNumber(number, config: config))%"
             case .date:
                 let date = Date(timeIntervalSince1970: number)
                 let formatter = DateFormatter()
@@ -26,7 +32,7 @@ struct NumiValue: Equatable {
                 formatter.timeStyle = .short
                 return formatter.string(from: date)
             case .time:
-                return formatDuration(number)
+                return formatDuration(number, config: config)
             case .hex:
                 return "0x\(String(Int(number), radix: 16, uppercase: true))"
             case .binary:
@@ -34,26 +40,30 @@ struct NumiValue: Equatable {
             case .octal:
                 return "0o\(String(Int(number), radix: 8))"
             case .scientific:
-                return formatScientific(number)
+                return formatScientific(number, config: config)
             default:
-                return "\(formatNumber(number)) \(unit.symbol)"
+                return "\(formatNumber(number, config: config)) \(unit.symbol)"
             }
         }
-        return formatNumber(number)
+        return formatNumber(number, config: config)
     }
 
-    private func formatNumber(_ n: Double) -> String {
-        if n == n.rounded() && abs(n) < 1e15 {
+    private func formatNumber(_ n: Double, config: FormattingConfig = .default) -> String {
+        let isFixed = config.decimalPrecision != .auto
+        let maxDecimals = isFixed ? config.decimalPrecision.rawValue : 6
+        let minDecimals = isFixed ? config.decimalPrecision.rawValue : 0
+
+        if !isFixed && n == n.rounded() && abs(n) < 1e15 {
             let intVal = Int(n)
             let s = String(intVal)
-            return addThousandsSeparator(s)
+            return config.useThousandsSeparator ? addThousandsSeparator(s) : s
         }
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 6
-        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = maxDecimals
+        formatter.minimumFractionDigits = minDecimals
         formatter.groupingSeparator = ","
-        formatter.usesGroupingSeparator = true
+        formatter.usesGroupingSeparator = config.useThousandsSeparator
         return formatter.string(from: NSNumber(value: n)) ?? String(n)
     }
 
@@ -95,20 +105,20 @@ struct NumiValue: Equatable {
         "SHIB", "PEPE", "USDT", "USDC", "DAI", "SATS",
     ]
 
-    private func formatCurrency(_ n: Double, code: String) -> String {
+    private func formatCurrency(_ n: Double, code: String, config: FormattingConfig = .default) -> String {
         let isCrypto = Self.cryptoCodes.contains(code)
+        let isFixed = config.decimalPrecision != .auto
 
         if isCrypto {
             let sym = Self.cryptoSymbols[code] ?? "\(code) "
-            let decimals = cryptoDecimals(for: code, value: n)
+            let autoDecimals = cryptoDecimals(for: code, value: n)
+            let decimals = isFixed ? config.decimalPrecision.rawValue : autoDecimals
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
             formatter.maximumFractionDigits = decimals
-            formatter.minimumFractionDigits = min(2, decimals)
-            formatter.usesGroupingSeparator = true
+            formatter.minimumFractionDigits = isFixed ? decimals : min(2, autoDecimals)
+            formatter.usesGroupingSeparator = config.useThousandsSeparator
             let numStr = formatter.string(from: NSNumber(value: n)) ?? String(n)
-            // For crypto with symbol prefix (₿, Ξ), put symbol first
-            // For others (SOL, BNB...), put after number
             if code == "BTC" || code == "ETH" {
                 return "\(sym)\(numStr)"
             }
@@ -117,11 +127,12 @@ struct NumiValue: Equatable {
 
         // Fiat formatting
         let sym = Self.fiatSymbols[code] ?? "\(code) "
+        let fiatDecimals = isFixed ? config.decimalPrecision.rawValue : 2
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 2
-        formatter.minimumFractionDigits = 2
-        formatter.usesGroupingSeparator = true
+        formatter.maximumFractionDigits = fiatDecimals
+        formatter.minimumFractionDigits = fiatDecimals
+        formatter.usesGroupingSeparator = config.useThousandsSeparator
         let numStr = formatter.string(from: NSNumber(value: n)) ?? String(format: "%.2f", n)
         return "\(sym)\(numStr)"
     }
@@ -147,25 +158,26 @@ struct NumiValue: Equatable {
         }
     }
 
-    private func formatDuration(_ seconds: Double) -> String {
+    private func formatDuration(_ seconds: Double, config: FormattingConfig = .default) -> String {
         let totalSeconds = abs(seconds)
         if totalSeconds >= 86400 {
             let days = totalSeconds / 86400
-            return "\(formatNumber(days)) days"
+            return "\(formatNumber(days, config: config)) days"
         } else if totalSeconds >= 3600 {
             let hours = totalSeconds / 3600
-            return "\(formatNumber(hours)) hours"
+            return "\(formatNumber(hours, config: config)) hours"
         } else if totalSeconds >= 60 {
             let mins = totalSeconds / 60
-            return "\(formatNumber(mins)) minutes"
+            return "\(formatNumber(mins, config: config)) minutes"
         }
-        return "\(formatNumber(totalSeconds)) seconds"
+        return "\(formatNumber(totalSeconds, config: config)) seconds"
     }
 
-    private func formatScientific(_ n: Double) -> String {
+    private func formatScientific(_ n: Double, config: FormattingConfig = .default) -> String {
+        let isFixed = config.decimalPrecision != .auto
         let formatter = NumberFormatter()
         formatter.numberStyle = .scientific
-        formatter.maximumFractionDigits = 6
+        formatter.maximumFractionDigits = isFixed ? config.decimalPrecision.rawValue : 6
         return formatter.string(from: NSNumber(value: n)) ?? String(n)
     }
 }

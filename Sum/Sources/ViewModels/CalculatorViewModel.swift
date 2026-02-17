@@ -16,11 +16,20 @@ class CalculatorViewModel: ObservableObject {
     @Published var currentNoteIndex: Int = 0
     @Published var isLoadingRates: Bool = false
 
+    // Formatting & display settings
+    @Published var formattingConfig: FormattingConfig = .default
+    @Published var tokenRanges: [[TokenRange]] = []
+    @Published var showLineNumbers: Bool = false
+    @Published var syntaxHighlightingEnabled: Bool = true
+
     private let parser = NumiParser()
+    private let tokenizer = Tokenizer()
     private let storage = NoteStorage.shared
+    private let settings = AppSettings.shared
     private var isLoaded = false
     private var previousResultSignature: String = ""
     private let hapticGenerator = UISelectionFeedbackGenerator()
+    private var settingsCancellable: AnyCancellable?
 
     var currentNote: Note? {
         notes.indices.contains(currentNoteIndex) ? notes[currentNoteIndex] : nil
@@ -28,9 +37,28 @@ class CalculatorViewModel: ObservableObject {
 
     init() {
         loadNotes()
+
+        // Subscribe to settings changes
+        settingsCancellable = settings.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.syncSettings()
+                    self?.recalculate()
+                }
+            }
+        syncSettings()
+
         isLoaded = true
         recalculate()
         Task { await loadCurrencyRates() }
+    }
+
+    /// Pull current values from AppSettings
+    private func syncSettings() {
+        formattingConfig = settings.formattingConfig
+        showLineNumbers = settings.showLineNumbers
+        syntaxHighlightingEnabled = settings.syntaxHighlightingEnabled
     }
 
     // MARK: - Calculation
@@ -38,8 +66,13 @@ class CalculatorViewModel: ObservableObject {
     func recalculate() {
         results = parser.evaluateAll(text)
 
+        // Compute token ranges per line for syntax highlighting
+        let lines = text.components(separatedBy: "\n")
+        tokenRanges = lines.map { tokenizer.tokenizeWithRanges($0) }
+
         // Subtle haptic when results actually change
-        let signature = results.compactMap { $0.value?.formatted }.joined(separator: "|")
+        let config = formattingConfig
+        let signature = results.compactMap { $0.value?.formatted(with: config) }.joined(separator: "|")
         if signature != previousResultSignature && !previousResultSignature.isEmpty {
             hapticGenerator.selectionChanged()
         }
