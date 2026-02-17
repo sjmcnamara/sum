@@ -35,6 +35,12 @@
 - os.Logger infrastructure, unified tokenizer, NumiTheme color constants
 - 14 new edge case tests (186 total)
 
+### v1.4.2 — UI Tweaks & Polish
+- Settings font hierarchy: larger headings, smaller items
+- Default currency selector (14 common currencies)
+- About view: 3D app icon, retro scrolling credits from CHANGELOG
+- New 3D metallic sigma app icon
+
 ---
 
 ## Upcoming

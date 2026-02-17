@@ -4,6 +4,11 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var settings = AppSettings.shared
 
+    /// Common currencies for the default currency picker
+    private let currencyOptions = [
+        "USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF",
+        "CNY", "INR", "KRW", "BRL", "MXN", "SGD", "HKD",
+    ]
 
     var body: some View {
         NavigationStack {
@@ -12,7 +17,7 @@ struct SettingsView: View {
                 Section {
                     Toggle(isOn: $settings.useThousandsSeparator) {
                         Label("Thousands Separator", systemImage: "number")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .tint(NumiTheme.textGreen)
@@ -20,7 +25,7 @@ struct SettingsView: View {
 
                     HStack {
                         Label("Decimal Places", systemImage: "textformat.123")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                             .lineLimit(1)
                             .layoutPriority(1)
@@ -36,9 +41,27 @@ struct SettingsView: View {
                         .fixedSize()
                     }
                     .listRowBackground(NumiTheme.background)
+
+                    HStack {
+                        Label("Default Currency", systemImage: "dollarsign.circle")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(NumiTheme.textGreen)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                        Spacer()
+                        Picker("", selection: $settings.defaultCurrency) {
+                            ForEach(currencyOptions, id: \.self) { code in
+                                Text(code).tag(code)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(NumiTheme.dimGreen)
+                        .fixedSize()
+                    }
+                    .listRowBackground(NumiTheme.background)
                 } header: {
                     Text("Formatting")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(.body, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen)
                 }
 
@@ -46,7 +69,7 @@ struct SettingsView: View {
                 Section {
                     Toggle(isOn: $settings.showLineNumbers) {
                         Label("Line Numbers", systemImage: "list.number")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .tint(NumiTheme.textGreen)
@@ -54,14 +77,14 @@ struct SettingsView: View {
 
                     Toggle(isOn: $settings.syntaxHighlightingEnabled) {
                         Label("Syntax Colors", systemImage: "paintbrush")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .tint(NumiTheme.textGreen)
                     .listRowBackground(NumiTheme.background)
                 } header: {
                     Text("Editor")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(.body, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen)
                 }
 
@@ -71,7 +94,7 @@ struct SettingsView: View {
                         AboutView()
                     } label: {
                         Label("About", systemImage: "info.circle")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .listRowBackground(NumiTheme.background)
@@ -80,13 +103,13 @@ struct SettingsView: View {
                         LicenseView()
                     } label: {
                         Label("License", systemImage: "doc.text")
-                            .font(.system(.body, design: .monospaced))
+                            .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .listRowBackground(NumiTheme.background)
                 } header: {
                     Text("Info")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(.body, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen)
                 }
             }
@@ -103,6 +126,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .background(NumiTheme.background.ignoresSafeArea())
         .preferredColorScheme(.dark)
     }
 }
