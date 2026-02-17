@@ -6,20 +6,6 @@ struct CalculatorView: View {
     @State private var showSettings = false
     @State private var showCopiedTotal = false
 
-    // Green-on-black theme colors
-    private let bgColor = Color(red: 0.05, green: 0.05, blue: 0.05)
-    private let textGreen = Color(red: 0.0, green: 0.9, blue: 0.3)
-    private let resultGreen = Color(red: 0.0, green: 1.0, blue: 0.4)
-    private let dimGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
-    private let barBg = Color(red: 0.08, green: 0.08, blue: 0.08)
-
-    private let uiTextGreen = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
-    private let uiResultGreen = UIColor(red: 0.0, green: 1.0, blue: 0.4, alpha: 1)
-    private let uiBgColor = UIColor(red: 0.05, green: 0.05, blue: 0.05, alpha: 1)
-    private let uiVarBlue = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)
-    private let uiKeywordColor = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
-    private let uiFunctionColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
-    private let uiCommentColor = UIColor(white: 0.35, alpha: 0.8)
 
     var body: some View {
         NavigationStack {
@@ -31,13 +17,13 @@ struct CalculatorView: View {
                     showLineNumbers: viewModel.showLineNumbers,
                     syntaxHighlightingEnabled: viewModel.syntaxHighlightingEnabled,
                     formattingConfig: viewModel.formattingConfig,
-                    resultColor: uiResultGreen,
-                    textColor: uiTextGreen,
-                    variableColor: uiVarBlue,
-                    keywordColor: uiKeywordColor,
-                    functionColor: uiFunctionColor,
-                    commentColor: uiCommentColor,
-                    backgroundColor: uiBgColor,
+                    resultColor: NumiTheme.uiResultGreen,
+                    textColor: NumiTheme.uiTextGreen,
+                    variableColor: NumiTheme.uiVariableBlue,
+                    keywordColor: NumiTheme.uiKeyword,
+                    functionColor: NumiTheme.uiFunction,
+                    commentColor: NumiTheme.uiComment,
+                    backgroundColor: NumiTheme.uiBackground,
                     font: .monospacedSystemFont(ofSize: 17, weight: .regular)
                 )
 
@@ -45,9 +31,9 @@ struct CalculatorView: View {
                     grandTotalBar(total)
                 }
             }
-            .background(bgColor)
+            .background(NumiTheme.background)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(bgColor, for: .navigationBar)
+            .toolbarBackground(NumiTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -67,7 +53,7 @@ struct CalculatorView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .foregroundColor(dimGreen)
+                            .foregroundColor(NumiTheme.dimGreen)
                     }
                 }
             }
@@ -87,19 +73,19 @@ struct CalculatorView: View {
         HStack {
             Text("Total")
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
-                .foregroundColor(dimGreen)
+                .foregroundColor(NumiTheme.dimGreen)
             Spacer()
             Text(showCopiedTotal ? "Copied" : total.formatted(with: viewModel.formattingConfig))
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                .foregroundColor(showCopiedTotal ? textGreen : resultGreen)
+                .foregroundColor(showCopiedTotal ? NumiTheme.textGreen : NumiTheme.resultGreen)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
-            barBg
+            NumiTheme.barBackground
                 .overlay(alignment: .top) {
                     Rectangle()
-                        .fill(dimGreen.opacity(0.3))
+                        .fill(NumiTheme.dimGreen.opacity(0.3))
                         .frame(height: 0.5)
                 }
         )
@@ -121,10 +107,10 @@ struct CalculatorView: View {
             HStack(spacing: 4) {
                 Text(viewModel.currentNote?.title ?? "Calculator")
                     .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                    .foregroundColor(textGreen)
+                    .foregroundColor(NumiTheme.textGreen)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(dimGreen)
+                    .foregroundColor(NumiTheme.dimGreen)
             }
         }
     }

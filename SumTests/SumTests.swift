@@ -9,7 +9,7 @@ final class ParserTests: XCTestCase {
         super.setUp()
         parser = NumiParser()
         // Set up some currency rates for conversion tests
-        parser.currencyRates = [
+        parser.setCurrencyRates([
             "USD": 1.0,
             "EUR": 0.92,
             "GBP": 0.79,
@@ -17,7 +17,7 @@ final class ParserTests: XCTestCase {
             "BTC": 0.0000154,   // 1/64935 ≈ $64,935
             "ETH": 0.000285,    // 1/3508 ≈ $3,508
             "SATS": 0.00000000154, // not used directly, SATS converts through BTC
-        ]
+        ])
     }
 
     // MARK: - Basic Arithmetic

@@ -5,12 +5,7 @@ import UIKit
 
 @MainActor
 class CalculatorViewModel: ObservableObject {
-    @Published var text: String = "" {
-        didSet {
-            guard isLoaded else { return }
-            recalculate()
-        }
-    }
+    @Published var text: String = ""
     @Published var results: [LineResult] = []
     @Published var notes: [Note] = []
     @Published var currentNoteIndex: Int = 0
@@ -29,7 +24,7 @@ class CalculatorViewModel: ObservableObject {
     private var isLoaded = false
     private var previousResultSignature: String = ""
     private let hapticGenerator = UISelectionFeedbackGenerator()
-    private var settingsCancellable: AnyCancellable?
+    private var cancellables = Set<AnyCancellable>()
 
     var currentNote: Note? {
         notes.indices.contains(currentNoteIndex) ? notes[currentNoteIndex] : nil
@@ -39,7 +34,7 @@ class CalculatorViewModel: ObservableObject {
         loadNotes()
 
         // Subscribe to settings changes
-        settingsCancellable = settings.objectWillChange
+        settings.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -47,6 +42,18 @@ class CalculatorViewModel: ObservableObject {
                     self?.recalculate()
                 }
             }
+            .store(in: &cancellables)
+
+        // Debounce text changes to avoid redundant parsing during fast typing
+        $text
+            .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                guard let self, self.isLoaded else { return }
+                self.recalculate()
+            }
+            .store(in: &cancellables)
+
         syncSettings()
 
         isLoaded = true
@@ -87,7 +94,7 @@ class CalculatorViewModel: ObservableObject {
     func loadCurrencyRates() async {
         isLoadingRates = true
         let rates = await CurrencyService.shared.getRates()
-        parser.currencyRates = rates
+        parser.setCurrencyRates(rates)
         isLoadingRates = false
         recalculate()
     }

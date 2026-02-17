@@ -108,11 +108,11 @@ class NumiTextEditorView: UIView {
     var resultColor: UIColor = .green
     var resultsFont: UIFont = .monospacedSystemFont(ofSize: 17, weight: .regular)
     var editorFont: UIFont = .monospacedSystemFont(ofSize: 17, weight: .regular)
-    var defaultTextColor: UIColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
-    var variableColor: UIColor = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)
-    var keywordColor: UIColor = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
-    var functionColor: UIColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
-    var commentColor: UIColor = UIColor(white: 0.35, alpha: 0.8)
+    var defaultTextColor: UIColor = NumiTheme.uiTextGreen
+    var variableColor: UIColor = NumiTheme.uiVariableBlue
+    var keywordColor: UIColor = NumiTheme.uiKeyword
+    var functionColor: UIColor = NumiTheme.uiFunction
+    var commentColor: UIColor = NumiTheme.uiComment
     var formattingConfig: FormattingConfig = .default
 
     // Suggestion engine for autocomplete
@@ -125,6 +125,7 @@ class NumiTextEditorView: UIView {
     private var isLineNumbersVisible = false
     private var currentResults: [LineResult] = []
     private let placeholderLabel = UILabel()
+    private var placeholderLeading: NSLayoutConstraint!
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -140,8 +141,8 @@ class NumiTextEditorView: UIView {
         let label = UILabel()
         label.text = "Copied"
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = UIColor(red: 0.05, green: 0.05, blue: 0.05, alpha: 1)
-        label.backgroundColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
+        label.textColor = NumiTheme.uiBackground
+        label.backgroundColor = NumiTheme.uiTextGreen
         label.textAlignment = .center
         label.layer.cornerRadius = 6
         label.layer.masksToBounds = true
@@ -223,7 +224,7 @@ class NumiTextEditorView: UIView {
             "sum",
         ]
         let placeholderText = placeholderLines.joined(separator: "\n")
-        let dimColor = UIColor(red: 0.0, green: 0.5, blue: 0.2, alpha: 0.4)
+        let dimColor = NumiTheme.uiDimGreen.withAlphaComponent(0.4)
         placeholderLabel.attributedText = NSAttributedString(
             string: placeholderText,
             attributes: [
@@ -232,9 +233,10 @@ class NumiTextEditorView: UIView {
             ]
         )
         addSubview(placeholderLabel)
+        placeholderLeading = placeholderLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12)
         NSLayoutConstraint.activate([
             placeholderLabel.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-            placeholderLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            placeholderLeading,
             placeholderLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
         ])
 
@@ -267,11 +269,7 @@ class NumiTextEditorView: UIView {
         textView.textContainerInset = insets
 
         // Also shift the placeholder
-        placeholderLabel.constraints.forEach { c in
-            if c.firstAttribute == .leading {
-                c.constant = show ? Self.gutterWidth + 4 : 12
-            }
-        }
+        placeholderLeading.constant = show ? Self.gutterWidth + 4 : 12
 
         updateResultsLayout()
     }
@@ -281,11 +279,11 @@ class NumiTextEditorView: UIView {
     private func buildKeyboardToolbar() -> UIView {
         let toolbarHeight: CGFloat = 40
         let toolbar = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: toolbarHeight))
-        toolbar.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1)
+        toolbar.backgroundColor = NumiTheme.uiToolbar
 
         // Top border
         let border = UIView()
-        border.backgroundColor = UIColor(red: 0.0, green: 0.5, blue: 0.2, alpha: 0.3)
+        border.backgroundColor = NumiTheme.uiDimGreen.withAlphaComponent(0.3)
         border.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(border)
         NSLayoutConstraint.activate([
@@ -327,8 +325,8 @@ class NumiTextEditorView: UIView {
             opStack.heightAnchor.constraint(equalTo: opScroll.heightAnchor),
         ])
 
-        let buttonColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
-        let buttonBg = UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1)
+        let buttonColor = NumiTheme.uiTextGreen
+        let buttonBg = NumiTheme.uiButton
 
         for (label, insert) in items {
             let button = makeToolbarButton(label: label, insertText: insert,
@@ -340,7 +338,7 @@ class NumiTextEditorView: UIView {
         // Dismiss keyboard button at the end of operator bar
         let dismissButton = UIButton(type: .system)
         dismissButton.setImage(UIImage(systemName: "keyboard.chevron.compact.down"), for: .normal)
-        dismissButton.tintColor = UIColor(red: 0.0, green: 0.5, blue: 0.2, alpha: 1)
+        dismissButton.tintColor = NumiTheme.uiDimGreen
         dismissButton.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
         dismissButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
         opStack.addArrangedSubview(dismissButton)
@@ -428,8 +426,8 @@ class NumiTextEditorView: UIView {
         // Rebuild chips
         suggestionStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        let chipColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
-        let chipBg = UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1)
+        let chipColor = NumiTheme.uiTextGreen
+        let chipBg = NumiTheme.uiButton
 
         for suggestion in suggestions {
             let button = makeToolbarButton(label: suggestion.text, insertText: suggestion.text,
@@ -441,7 +439,7 @@ class NumiTextEditorView: UIView {
         // Dismiss button at end of suggestion bar too
         let dismissButton = UIButton(type: .system)
         dismissButton.setImage(UIImage(systemName: "keyboard.chevron.compact.down"), for: .normal)
-        dismissButton.tintColor = UIColor(red: 0.0, green: 0.5, blue: 0.2, alpha: 1)
+        dismissButton.tintColor = NumiTheme.uiDimGreen
         dismissButton.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
         dismissButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
         suggestionStack.addArrangedSubview(dismissButton)
@@ -473,15 +471,23 @@ class NumiTextEditorView: UIView {
         guard let selectedRange = tv.selectedTextRange,
               selectedRange.isEmpty else { return nil }
         let cursorOffset = tv.offset(from: tv.beginningOfDocument, to: selectedRange.start)
-        let text = tv.text ?? ""
-        let utf16 = text.utf16
-        guard cursorOffset > 0 && cursorOffset <= utf16.count else { return nil }
+        return Self.wordPrefix(in: tv.text ?? "", cursorUTF16Offset: cursorOffset)
+    }
 
-        // Walk backward from cursor to find start of word
-        var startOffset = cursorOffset
+    /// Pure helper for word prefix extraction — testable without UITextView.
+    /// Walks backward from cursorUTF16Offset through the string's UTF-16 code units
+    /// to find a word boundary. Returns nil if no valid 2+ char prefix at cursor.
+    static func wordPrefix(in text: String, cursorUTF16Offset: Int) -> (prefix: String, range: NSRange)? {
+        let utf16 = text.utf16
+        guard cursorUTF16Offset > 0 && cursorUTF16Offset <= utf16.count else { return nil }
+
+        var startOffset = cursorUTF16Offset
         while startOffset > 0 {
             let idx = utf16.index(utf16.startIndex, offsetBy: startOffset - 1)
-            let char = Character(UnicodeScalar(utf16[idx])!)
+            guard let scalar = UnicodeScalar(utf16[idx]) else {
+                break // Surrogate pair or invalid scalar — treat as word boundary
+            }
+            let char = Character(scalar)
             if char.isLetter || char.isNumber || char == "_" {
                 startOffset -= 1
             } else {
@@ -489,13 +495,12 @@ class NumiTextEditorView: UIView {
             }
         }
 
-        guard startOffset < cursorOffset else { return nil }
+        guard startOffset < cursorUTF16Offset else { return nil }
 
-        let range = NSRange(location: startOffset, length: cursorOffset - startOffset)
+        let range = NSRange(location: startOffset, length: cursorUTF16Offset - startOffset)
         let nsText = text as NSString
         let word = nsText.substring(with: range)
 
-        // Only suggest if it's at least 2 chars
         guard word.count >= 2 else { return nil }
 
         return (prefix: word, range: range)
@@ -782,7 +787,7 @@ class ResultsOverlayView: UIView {
 
     var entries: [Entry] = []
     var resultColor: UIColor = .green
-    var errorColor: UIColor = UIColor(red: 0.7, green: 0.3, blue: 0.3, alpha: 0.6)
+    var errorColor: UIColor = NumiTheme.uiError
     var resultsFont: UIFont = .monospacedSystemFont(ofSize: 17, weight: .medium)
 
     /// Callback when a result is tapped — passes the result text

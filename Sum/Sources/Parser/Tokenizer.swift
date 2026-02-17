@@ -136,6 +136,23 @@ struct Tokenizer {
         ("em", .em),
     ]
 
+    /// O(1) lookup for single-word units (no spaces in the phrase)
+    static let singleWordUnitMap: [String: NumiUnit] = {
+        var map: [String: NumiUnit] = [:]
+        for (phrase, unit) in unitMap where !phrase.contains(" ") {
+            let key = phrase.lowercased()
+            if map[key] == nil { // first match wins (preserves unitMap ordering priority)
+                map[key] = unit
+            }
+        }
+        return map
+    }()
+
+    /// Multi-word units only (contain spaces), tried with prefix matching
+    static let multiWordUnits: [(String, NumiUnit)] = {
+        unitMap.filter { $0.0.contains(" ") }
+    }()
+
     static let functionNames: Set<String> = [
         "sqrt", "cbrt", "abs", "log", "ln", "log2", "log10",
         "sin", "cos", "tan", "asin", "acos", "atan",
@@ -201,23 +218,63 @@ struct Tokenizer {
         "sats": "SATS", "satoshi": "SATS", "satoshis": "SATS",
     ]
 
-    // MARK: - Tokenize
+    // MARK: - Internal Token with Position
 
+    /// A token paired with its source range and highlight kind
+    private struct LocatedToken {
+        let token: Token
+        let range: NSRange
+        let highlightKind: TokenHighlightKind
+    }
+
+    // MARK: - Public API
+
+    /// Returns just tokens for the parser (discards ranges)
     func tokenize(_ input: String) -> [Token] {
-        var tokens: [Token] = []
+        tokenizeInternal(input).map { $0.token }
+    }
+
+    /// Returns highlight ranges for syntax coloring
+    func tokenizeWithRanges(_ input: String) -> [TokenRange] {
+        tokenizeInternal(input).map { TokenRange(kind: $0.highlightKind, range: $0.range) }
+    }
+
+    // MARK: - Unified Tokenization
+
+    /// Single tokenization pass that produces tokens, ranges, and highlight kinds.
+    /// Both `tokenize()` and `tokenizeWithRanges()` are thin wrappers around this.
+    private func tokenizeInternal(_ input: String) -> [LocatedToken] {
+        var located: [LocatedToken] = []
         var i = input.startIndex
+
+        func nsRange(from start: String.Index, to end: String.Index) -> NSRange {
+            let loc = input.distance(from: input.startIndex, to: start)
+            let len = input.distance(from: start, to: end)
+            return NSRange(location: loc, length: len)
+        }
+
+        func append(_ token: Token, _ kind: TokenHighlightKind, from start: String.Index, to end: String.Index) {
+            located.append(LocatedToken(token: token, range: nsRange(from: start, to: end), highlightKind: kind))
+        }
 
         while i < input.endIndex {
             let ch = input[i]
 
             // Comments: // or # stop tokenizing the rest of the line
-            if ch == "#" { break }
+            if ch == "#" {
+                // Comment tokens aren't needed by parser but range is needed for highlighting
+                located.append(LocatedToken(token: .word(""), range: nsRange(from: i, to: input.endIndex), highlightKind: .comment))
+                break
+            }
             if ch == "/" {
                 let next = input.index(after: i)
-                if next < input.endIndex && input[next] == "/" { break }
+                if next < input.endIndex && input[next] == "/" {
+                    located.append(LocatedToken(token: .word(""), range: nsRange(from: i, to: input.endIndex), highlightKind: .comment))
+                    break
+                }
 
                 // Compound speed units: km/h, m/s, miles/h, mi/h, ft/s
-                if let lastToken = tokens.last, case .unit(let u) = lastToken, next < input.endIndex {
+                if let last = located.last, case .unit(let u) = last.token, next < input.endIndex {
                     let suffix = input[next].lowercased()
                     var speedUnit: NumiUnit?
                     if suffix == "h" {
@@ -235,9 +292,11 @@ struct Tokenizer {
                     }
                     if let speed = speedUnit {
                         let afterSuffix = input.index(after: next)
-                        // Word boundary check
                         if afterSuffix >= input.endIndex || !input[afterSuffix].isLetter {
-                            tokens[tokens.count - 1] = .unit(speed)
+                            // Replace previous unit token with compound speed unit, extending the range
+                            let prevRange = located[located.count - 1].range
+                            let extended = NSRange(location: prevRange.location, length: prevRange.length + 2)
+                            located[located.count - 1] = LocatedToken(token: .unit(speed), range: extended, highlightKind: .unit)
                             i = afterSuffix
                             continue
                         }
@@ -255,185 +314,12 @@ struct Tokenizer {
             if let currencyCode = Self.currencySymbols[String(ch)] {
                 let next = input.index(after: i)
                 if next < input.endIndex && (input[next].isNumber || input[next] == ".") {
-                    tokens.append(.unit(.currency(currencyCode)))
-                    i = next
-                    continue
-                }
-                // Standalone symbol (e.g. "in ₿", "to ETH")
-                if currencyCode == "BTC" || currencyCode == "ETH" {
-                    tokens.append(.unit(.currency(currencyCode)))
-                    i = input.index(after: i)
-                    continue
-                }
-            }
-
-            // R$ (Brazilian Real)
-            if ch == "R" {
-                let next = input.index(after: i)
-                if next < input.endIndex && input[next] == "$" {
-                    let afterSymbol = input.index(after: next)
-                    if afterSymbol < input.endIndex && (input[afterSymbol].isNumber || input[afterSymbol] == ".") {
-                        tokens.append(.unit(.currency("BRL")))
-                        i = afterSymbol
-                        continue
-                    }
-                }
-            }
-
-            // Numbers (including hex, binary, octal)
-            if ch.isNumber || (ch == "." && i < input.endIndex) {
-                let (num, endIdx, numUnit) = parseNumber(input, from: i)
-                if let n = num {
-                    tokens.append(.number(n))
-                    if let u = numUnit {
-                        tokens.append(.unit(u))
-                    }
-                    i = endIdx
-                    continue
-                }
-            }
-
-            // Operators
-            if let opResult = parseOperator(input, from: i) {
-                tokens.append(.op(opResult.0))
-                i = opResult.1
-                continue
-            }
-
-            // Parentheses
-            if ch == "(" {
-                tokens.append(.leftParen)
-                i = input.index(after: i)
-                continue
-            }
-            if ch == ")" {
-                tokens.append(.rightParen)
-                i = input.index(after: i)
-                continue
-            }
-
-            // Comma
-            if ch == "," {
-                // Check if it's a thousands separator (digit,digit pattern)
-                if !tokens.isEmpty, case .number = tokens.last {
-                    let next = input.index(after: i)
-                    if next < input.endIndex && input[next].isNumber {
-                        // Likely thousands separator, skip it
-                        i = next
-                        continue
-                    }
-                }
-                tokens.append(.comma)
-                i = input.index(after: i)
-                continue
-            }
-
-            // Degree symbol
-            if ch == "°" {
-                let next = input.index(after: i)
-                if next < input.endIndex {
-                    let nextCh = input[next].lowercased()
-                    if nextCh == "c" {
-                        tokens.append(.unit(.celsius))
-                        i = input.index(after: next)
-                        continue
-                    } else if nextCh == "f" {
-                        tokens.append(.unit(.fahrenheit))
-                        i = input.index(after: next)
-                        continue
-                    }
-                }
-                tokens.append(.unit(.degree))
-                i = input.index(after: i)
-                continue
-            }
-
-            // Percent sign
-            if ch == "%" {
-                tokens.append(.unit(.percent))
-                i = input.index(after: i)
-                continue
-            }
-
-            // Words (identifiers, keywords, units, functions)
-            if ch.isLetter || ch == "_" {
-                let (token, endIdx) = parseWord(input, from: i)
-                tokens.append(token)
-                i = endIdx
-                continue
-            }
-
-            // Skip unrecognized characters
-            i = input.index(after: i)
-        }
-
-        return tokens
-    }
-
-    // MARK: - Token Ranges for Syntax Highlighting
-
-    /// Tokenizes the input and returns highlight ranges for syntax coloring.
-    /// Mirrors `tokenize` logic but tracks source positions.
-    func tokenizeWithRanges(_ input: String) -> [TokenRange] {
-        var ranges: [TokenRange] = []
-        var i = input.startIndex
-
-        func nsRange(from start: String.Index, to end: String.Index) -> NSRange {
-            let loc = input.distance(from: input.startIndex, to: start)
-            let len = input.distance(from: start, to: end)
-            return NSRange(location: loc, length: len)
-        }
-
-        while i < input.endIndex {
-            let ch = input[i]
-
-            // Comments: // or # emit a comment range and stop
-            if ch == "#" {
-                ranges.append(TokenRange(kind: .comment, range: nsRange(from: i, to: input.endIndex)))
-                break
-            }
-            if ch == "/" {
-                let next = input.index(after: i)
-                if next < input.endIndex && input[next] == "/" {
-                    ranges.append(TokenRange(kind: .comment, range: nsRange(from: i, to: input.endIndex)))
-                    break
-                }
-
-                // Compound speed units: km/h, m/s, miles/h, mi/h, ft/s
-                if let lastRange = ranges.last, lastRange.kind == .unit, next < input.endIndex {
-                    let suffix = input[next].lowercased()
-                    let isSpeed = (suffix == "h" || suffix == "s")
-                    if isSpeed {
-                        let afterSuffix = input.index(after: next)
-                        if afterSuffix >= input.endIndex || !input[afterSuffix].isLetter {
-                            // Extend the previous unit range to include /h or /s
-                            let extended = NSRange(location: lastRange.range.location,
-                                                   length: lastRange.range.length + 2)
-                            ranges[ranges.count - 1] = TokenRange(kind: .unit, range: extended)
-                            i = afterSuffix
-                            continue
-                        }
-                    }
-                }
-            }
-
-            // Skip whitespace (no range emitted)
-            if ch.isWhitespace {
-                i = input.index(after: i)
-                continue
-            }
-
-            // Currency symbol prefix ($100, €50, ₿1.5, Ξ10, etc.)
-            if let currencyCode = Self.currencySymbols[String(ch)] {
-                let symbolStart = i
-                let next = input.index(after: i)
-                if next < input.endIndex && (input[next].isNumber || input[next] == ".") {
-                    ranges.append(TokenRange(kind: .unit, range: nsRange(from: symbolStart, to: next)))
+                    append(.unit(.currency(currencyCode)), .unit, from: i, to: next)
                     i = next
                     continue
                 }
                 if currencyCode == "BTC" || currencyCode == "ETH" {
-                    ranges.append(TokenRange(kind: .unit, range: nsRange(from: symbolStart, to: next)))
+                    append(.unit(.currency(currencyCode)), .unit, from: i, to: next)
                     i = next
                     continue
                 }
@@ -445,7 +331,7 @@ struct Tokenizer {
                 if next < input.endIndex && input[next] == "$" {
                     let afterSymbol = input.index(after: next)
                     if afterSymbol < input.endIndex && (input[afterSymbol].isNumber || input[afterSymbol] == ".") {
-                        ranges.append(TokenRange(kind: .unit, range: nsRange(from: i, to: afterSymbol)))
+                        append(.unit(.currency("BRL")), .unit, from: i, to: afterSymbol)
                         i = afterSymbol
                         continue
                     }
@@ -455,9 +341,13 @@ struct Tokenizer {
             // Numbers (including hex, binary, octal)
             if ch.isNumber || (ch == "." && i < input.endIndex) {
                 let numStart = i
-                let (num, endIdx, _) = parseNumber(input, from: i)
-                if num != nil {
-                    ranges.append(TokenRange(kind: .number, range: nsRange(from: numStart, to: endIdx)))
+                let (num, endIdx, numUnit) = parseNumber(input, from: i)
+                if let n = num {
+                    append(.number(n), .number, from: numStart, to: endIdx)
+                    if let u = numUnit {
+                        // Display format units (hex/binary/octal) share the number range
+                        append(.unit(u), .unit, from: numStart, to: endIdx)
+                    }
                     i = endIdx
                     continue
                 }
@@ -467,40 +357,61 @@ struct Tokenizer {
             if let opResult = parseOperator(input, from: i) {
                 let opStart = i
                 i = opResult.1
-                ranges.append(TokenRange(kind: .op, range: nsRange(from: opStart, to: i)))
+                append(.op(opResult.0), .op, from: opStart, to: i)
                 continue
             }
 
-            // Parentheses / comma
-            if ch == "(" || ch == ")" || ch == "," {
-                // plain — skip without emitting a highlight range
-                i = input.index(after: i)
+            // Parentheses
+            if ch == "(" || ch == ")" {
+                let token: Token = ch == "(" ? .leftParen : .rightParen
+                let next = input.index(after: i)
+                append(token, .plain, from: i, to: next)
+                i = next
+                continue
+            }
+
+            // Comma
+            if ch == "," {
+                if !located.isEmpty, case .number = located.last?.token {
+                    let next = input.index(after: i)
+                    if next < input.endIndex && input[next].isNumber {
+                        i = next
+                        continue
+                    }
+                }
+                let next = input.index(after: i)
+                append(.comma, .plain, from: i, to: next)
+                i = next
                 continue
             }
 
             // Degree symbol
             if ch == "°" {
-                let degStart = i
                 let next = input.index(after: i)
                 if next < input.endIndex {
                     let nextCh = input[next].lowercased()
-                    if nextCh == "c" || nextCh == "f" {
+                    if nextCh == "c" {
                         let afterUnit = input.index(after: next)
-                        ranges.append(TokenRange(kind: .unit, range: nsRange(from: degStart, to: afterUnit)))
+                        append(.unit(.celsius), .unit, from: i, to: afterUnit)
+                        i = afterUnit
+                        continue
+                    } else if nextCh == "f" {
+                        let afterUnit = input.index(after: next)
+                        append(.unit(.fahrenheit), .unit, from: i, to: afterUnit)
                         i = afterUnit
                         continue
                     }
                 }
-                ranges.append(TokenRange(kind: .unit, range: nsRange(from: degStart, to: next)))
+                append(.unit(.degree), .unit, from: i, to: next)
                 i = next
                 continue
             }
 
             // Percent sign
             if ch == "%" {
-                let pctStart = i
-                i = input.index(after: i)
-                ranges.append(TokenRange(kind: .unit, range: nsRange(from: pctStart, to: i)))
+                let next = input.index(after: i)
+                append(.unit(.percent), .unit, from: i, to: next)
+                i = next
                 continue
             }
 
@@ -515,12 +426,12 @@ struct Tokenizer {
                 case .variable: kind = .variable
                 case .unit: kind = .unit
                 case .op(let opVal) where opVal == .modulo || opVal == .bitwiseXor || opVal == .bitwiseNot:
-                    kind = .keyword  // highlight word operators distinctly
+                    kind = .keyword
                 case .op: kind = .op
                 case .word: kind = .plain
                 default: kind = .plain
                 }
-                ranges.append(TokenRange(kind: kind, range: nsRange(from: wordStart, to: endIdx)))
+                append(token, kind, from: wordStart, to: endIdx)
                 i = endIdx
                 continue
             }
@@ -529,7 +440,7 @@ struct Tokenizer {
             i = input.index(after: i)
         }
 
-        return ranges
+        return located
     }
 
     // MARK: - Number Parsing
@@ -546,7 +457,6 @@ struct Tokenizer {
                     return parseHex(input, from: input.index(after: next))
                 }
                 if prefix == "b" || prefix == "B" {
-                    // Distinguish from 0b... (binary) vs "0 bytes"
                     let afterB = input.index(after: next)
                     if afterB < input.endIndex && (input[afterB] == "0" || input[afterB] == "1") {
                         return parseBinary(input, from: afterB)
@@ -717,12 +627,10 @@ struct Tokenizer {
         case "minus": return (.op(.subtract), i)
         case "times": return (.op(.multiply), i)
         case "divided":
-            // Check for "divided by"
             let remaining = String(input[i...]).trimmingCharacters(in: .whitespaces)
             if remaining.lowercased().hasPrefix("by") {
                 var j = i
                 while j < input.endIndex && input[j].isWhitespace { j = input.index(after: j) }
-                // skip "by"
                 if j < input.endIndex && input[j].lowercased() == "b" {
                     j = input.index(after: j)
                     if j < input.endIndex && input[j].lowercased() == "y" {
@@ -743,17 +651,21 @@ struct Tokenizer {
             return (.function(lower), i)
         }
 
-        // Multi-word unit check: try to match longer unit strings
+        // Multi-word unit check (try longest match first)
         let remaining = String(input[start...]).lowercased()
-        for (phrase, unit) in Self.unitMap {
+        for (phrase, unit) in Self.multiWordUnits {
             let phraseLower = phrase.lowercased()
             if remaining.hasPrefix(phraseLower) {
                 let afterPhrase = input.index(start, offsetBy: phrase.count)
-                // Make sure the match ends at a word boundary
                 if afterPhrase >= input.endIndex || !input[afterPhrase].isLetter {
                     return (.unit(unit), afterPhrase)
                 }
             }
+        }
+
+        // Single-word unit lookup (O(1) dictionary)
+        if let unit = Self.singleWordUnitMap[lower] {
+            return (.unit(unit), i)
         }
 
         // Currency codes (case-insensitive for 3-letter codes)
@@ -762,10 +674,9 @@ struct Tokenizer {
             return (.unit(.currency(upper)), i)
         }
 
-        // Crypto names (check before fiat currency names since some overlap)
+        // Crypto names
         if let cryptoTicker = Self.cryptoNames[lower] {
             if cryptoTicker == "SATS" {
-                // Satoshis: 1 sat = 0.00000001 BTC, treated as a special currency unit
                 return (.unit(.currency("SATS")), i)
             }
             return (.unit(.currency(cryptoTicker)), i)
@@ -776,8 +687,6 @@ struct Tokenizer {
         case "dollar", "dollars": return (.unit(.currency("USD")), i)
         case "euro", "euros": return (.unit(.currency("EUR")), i)
         case "pound", "pounds":
-            // "pound" could be weight or currency - check context
-            // Default to weight; currency will be handled if preceded by a number and followed by conversion
             return (.unit(.pound), i)
         case "yen": return (.unit(.currency("JPY")), i)
         default: break
