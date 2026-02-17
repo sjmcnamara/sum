@@ -32,7 +32,8 @@ class NumiParser {
                 results.append(LineResult(id: index, input: line, value: value, error: nil, assignmentVariable: assignVar))
                 previousResults.append(value)
             } catch {
-                results.append(LineResult(id: index, input: line, value: nil, error: nil, assignmentVariable: nil))
+                let errorMsg = describeError(error)
+                results.append(LineResult(id: index, input: line, value: nil, error: errorMsg, assignmentVariable: nil))
                 previousResults.append(nil)
             }
         }
@@ -657,6 +658,20 @@ enum NumiError: Error {
     case divisionByZero
     case invalidExpression
     case incompatibleUnits
+}
+
+extension NumiParser {
+    /// Converts a caught error into a short user-facing message
+    func describeError(_ error: Error) -> String {
+        if let numiError = error as? NumiError {
+            switch numiError {
+            case .divisionByZero: return "÷ by 0"
+            case .invalidExpression: return "invalid"
+            case .incompatibleUnits: return "bad units"
+            }
+        }
+        return "error"
+    }
 }
 
 // MARK: - Safe Array Access

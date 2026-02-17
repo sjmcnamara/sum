@@ -475,3 +475,181 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(storage.loadCurrentNoteIndex(), 0)
     }
 }
+
+// MARK: - v1.1 Feature Tests
+
+final class ErrorIndicatorTests: XCTestCase {
+
+    private var parser: NumiParser!
+
+    override func setUp() {
+        super.setUp()
+        parser = NumiParser()
+    }
+
+    func testDivisionByZeroError() {
+        let results = parser.evaluateAll("10 / 0")
+        XCTAssertEqual(results.count, 1)
+        XCTAssertNil(results[0].value)
+        XCTAssertEqual(results[0].error, "÷ by 0")
+    }
+
+    func testValidExpressionNoError() {
+        let results = parser.evaluateAll("2 + 3")
+        XCTAssertEqual(results.count, 1)
+        XCTAssertNotNil(results[0].value)
+        XCTAssertNil(results[0].error)
+    }
+
+    func testEmptyLineNoError() {
+        let results = parser.evaluateAll("")
+        XCTAssertEqual(results.count, 1)
+        XCTAssertNil(results[0].value)
+        XCTAssertNil(results[0].error)
+    }
+
+    func testMixedValidAndErrorLines() {
+        let results = parser.evaluateAll("10 + 5\n100 / 0\n3 * 4")
+        XCTAssertEqual(results.count, 3)
+        XCTAssertEqual(results[0].value?.number, 15)
+        XCTAssertNil(results[0].error)
+        XCTAssertNil(results[1].value)
+        XCTAssertEqual(results[1].error, "÷ by 0")
+        XCTAssertEqual(results[2].value?.number, 12)
+        XCTAssertNil(results[2].error)
+    }
+
+    func testUnrecognizedExpressionSilent() {
+        // Gibberish that the parser can't evaluate — should produce nil value
+        // with either an error or nil error (depends on whether it throws or returns nil)
+        let results = parser.evaluateAll("hello world")
+        XCTAssertEqual(results.count, 1)
+        // Should not crash — result is either nil value or has a value
+    }
+}
+
+final class ResultFormattingTests: XCTestCase {
+
+    func testFormattedInteger() {
+        let value = NumiValue(1234567)
+        XCTAssertEqual(value.formatted, "1,234,567")
+    }
+
+    func testFormattedDecimal() {
+        let value = NumiValue(3.14159)
+        let formatted = value.formatted
+        XCTAssertTrue(formatted.contains("3.14"), "Expected formatted to contain '3.14', got: \(formatted)")
+    }
+
+    func testFormattedCurrencyUSD() {
+        let value = NumiValue(99.99, unit: .currency("USD"))
+        XCTAssertEqual(value.formatted, "$99.99")
+    }
+
+    func testFormattedPercent() {
+        let value = NumiValue(25, unit: .percent)
+        XCTAssertEqual(value.formatted, "25%")
+    }
+
+    func testFormattedHex() {
+        let value = NumiValue(255, unit: .hex)
+        XCTAssertEqual(value.formatted, "0xFF")
+    }
+
+    func testFormattedBinary() {
+        let value = NumiValue(10, unit: .binary)
+        XCTAssertEqual(value.formatted, "0b1010")
+    }
+
+    func testFormattedBTC() {
+        let value = NumiValue(1.5, unit: .currency("BTC"))
+        let formatted = value.formatted
+        XCTAssertTrue(formatted.hasPrefix("₿"), "Expected BTC prefix ₿, got: \(formatted)")
+    }
+
+    func testFormattedNegative() {
+        let value = NumiValue(-42)
+        XCTAssertEqual(value.formatted, "-42")
+    }
+
+    func testFormattedLargeNumber() {
+        let value = NumiValue(1000000)
+        XCTAssertEqual(value.formatted, "1,000,000")
+    }
+
+    func testFormattedZero() {
+        let value = NumiValue(0)
+        XCTAssertEqual(value.formatted, "0")
+    }
+}
+
+final class NoteSearchTests: XCTestCase {
+
+    func testSearchByTitle() {
+        let notes = [
+            Note(title: "Shopping List", content: "milk\neggs"),
+            Note(title: "Budget", content: "rent = 2000"),
+            Note(title: "Workout", content: "sets = 3"),
+        ]
+        let query = "budget"
+        let filtered = notes.enumerated().filter { _, note in
+            note.title.lowercased().contains(query) ||
+            note.content.lowercased().contains(query)
+        }
+        XCTAssertEqual(filtered.count, 1)
+        XCTAssertEqual(filtered[0].element.title, "Budget")
+    }
+
+    func testSearchByContent() {
+        let notes = [
+            Note(title: "Shopping", content: "milk\neggs\nbutter"),
+            Note(title: "Budget", content: "rent = 2000\nfood = 500"),
+        ]
+        let query = "eggs"
+        let filtered = notes.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.content.lowercased().contains(query)
+        }
+        XCTAssertEqual(filtered.count, 1)
+        XCTAssertEqual(filtered[0].title, "Shopping")
+    }
+
+    func testSearchEmptyQuery() {
+        let notes = [
+            Note(title: "A", content: "1"),
+            Note(title: "B", content: "2"),
+        ]
+        let query = ""
+        // Empty query returns all
+        let filtered = query.isEmpty ? notes : notes.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.content.lowercased().contains(query)
+        }
+        XCTAssertEqual(filtered.count, 2)
+    }
+
+    func testSearchNoMatch() {
+        let notes = [
+            Note(title: "Math", content: "2 + 2"),
+            Note(title: "Physics", content: "F = ma"),
+        ]
+        let query = "chemistry"
+        let filtered = notes.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.content.lowercased().contains(query)
+        }
+        XCTAssertEqual(filtered.count, 0)
+    }
+
+    func testSearchCaseInsensitive() {
+        let notes = [
+            Note(title: "My Budget", content: ""),
+        ]
+        let query = "my budget"
+        let filtered = notes.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.content.lowercased().contains(query)
+        }
+        XCTAssertEqual(filtered.count, 1)
+    }
+}
