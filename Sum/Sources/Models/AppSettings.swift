@@ -11,6 +11,7 @@ class AppSettings: ObservableObject {
     private let decimalPrecisionKey = "org.sum.decimalPrecision"
     private let showLineNumbersKey = "org.sum.showLineNumbers"
     private let syntaxHighlightingKey = "org.sum.syntaxHighlighting"
+    private let defaultCurrencyKey = "org.sum.defaultCurrency"
 
     @Published var useThousandsSeparator: Bool {
         didSet { defaults.set(useThousandsSeparator, forKey: thousandsSeparatorKey) }
@@ -28,12 +29,17 @@ class AppSettings: ObservableObject {
         didSet { defaults.set(syntaxHighlightingEnabled, forKey: syntaxHighlightingKey) }
     }
 
+    @Published var defaultCurrency: String {
+        didSet { defaults.set(defaultCurrency, forKey: defaultCurrencyKey) }
+    }
+
     init() {
         self.useThousandsSeparator = defaults.object(forKey: thousandsSeparatorKey) as? Bool ?? true
         let rawPrecision = defaults.object(forKey: decimalPrecisionKey) as? Int ?? -1
         self.decimalPrecision = DecimalPrecision(rawValue: rawPrecision) ?? .auto
         self.showLineNumbers = defaults.object(forKey: showLineNumbersKey) as? Bool ?? false
         self.syntaxHighlightingEnabled = defaults.object(forKey: syntaxHighlightingKey) as? Bool ?? true
+        self.defaultCurrency = defaults.string(forKey: defaultCurrencyKey) ?? "USD"
     }
 
     /// Builds an immutable config snapshot for formatting
