@@ -3,6 +3,7 @@ import SwiftUI
 struct CalculatorView: View {
     @StateObject private var viewModel = CalculatorViewModel()
     @State private var showNotesList = false
+    @State private var showCopiedTotal = false
 
     // Green-on-black theme colors
     private let bgColor = Color(red: 0.05, green: 0.05, blue: 0.05)
@@ -70,9 +71,9 @@ struct CalculatorView: View {
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundColor(dimGreen)
             Spacer()
-            Text(total.formatted)
+            Text(showCopiedTotal ? "Copied" : total.formatted)
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                .foregroundColor(resultGreen)
+                .foregroundColor(showCopiedTotal ? textGreen : resultGreen)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -84,6 +85,15 @@ struct CalculatorView: View {
                         .frame(height: 0.5)
                 }
         )
+        .onTapGesture {
+            UIPasteboard.general.string = total.formatted
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            withAnimation(.easeIn(duration: 0.1)) { showCopiedTotal = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                withAnimation(.easeOut(duration: 0.2)) { showCopiedTotal = false }
+            }
+        }
     }
 
     // MARK: - Note Title

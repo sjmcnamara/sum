@@ -5,25 +5,45 @@ struct NotesListView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var editingNoteId: UUID?
     @State private var editingName: String = ""
+    @State private var searchText: String = ""
 
     private let bgColor = Color(red: 0.05, green: 0.05, blue: 0.05)
     private let textGreen = Color(red: 0.0, green: 0.9, blue: 0.3)
     private let dimGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
     private let resultGreen = Color(red: 0.0, green: 1.0, blue: 0.4)
 
+    /// Notes filtered by search text (matches title or content)
+    private var filteredNotes: [(index: Int, note: Note)] {
+        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        if query.isEmpty {
+            return viewModel.notes.enumerated().map { ($0.offset, $0.element) }
+        }
+        return viewModel.notes.enumerated().compactMap { index, note in
+            if note.title.lowercased().contains(query) ||
+               note.content.lowercased().contains(query) {
+                return (index, note)
+            }
+            return nil
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array(viewModel.notes.enumerated()), id: \.element.id) { index, note in
+                ForEach(filteredNotes, id: \.note.id) { index, note in
                     noteRow(note: note, index: index)
                         .listRowBackground(bgColor)
                 }
                 .onDelete { indexSet in
-                    for index in indexSet {
-                        viewModel.deleteNote(at: index)
+                    // Map filtered indices back to model indices
+                    let filtered = filteredNotes
+                    for offset in indexSet {
+                        let modelIndex = filtered[offset].index
+                        viewModel.deleteNote(at: modelIndex)
                     }
                 }
             }
+            .searchable(text: $searchText, prompt: "Search notes")
             .scrollContentBackground(.hidden)
             .background(bgColor)
             .navigationTitle("Notes")
@@ -67,9 +87,15 @@ struct NotesListView: View {
                         Text(note.title)
                             .font(.system(.body, design: .monospaced))
                             .foregroundColor(textGreen)
+                        if let preview = contentPreview(note) {
+                            Text(preview)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(dimGreen.opacity(0.8))
+                                .lineLimit(1)
+                        }
                         Text(formattedDate(note.updatedAt))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(dimGreen)
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(dimGreen.opacity(0.5))
                     }
                 }
 
@@ -98,6 +124,14 @@ struct NotesListView: View {
                 }
             }
         }
+    }
+
+    private func contentPreview(_ note: Note) -> String? {
+        let firstLine = note.content
+            .components(separatedBy: "\n")
+            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
+        guard let line = firstLine, !line.isEmpty else { return nil }
+        return String(line.prefix(40))
     }
 
     private func formattedDate(_ date: Date) -> String {

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import UIKit
 
 @MainActor
 class CalculatorViewModel: ObservableObject {
@@ -18,6 +19,8 @@ class CalculatorViewModel: ObservableObject {
     private let parser = NumiParser()
     private let storage = NoteStorage.shared
     private var isLoaded = false
+    private var previousResultSignature: String = ""
+    private let hapticGenerator = UISelectionFeedbackGenerator()
 
     var currentNote: Note? {
         notes.indices.contains(currentNoteIndex) ? notes[currentNoteIndex] : nil
@@ -34,6 +37,14 @@ class CalculatorViewModel: ObservableObject {
 
     func recalculate() {
         results = parser.evaluateAll(text)
+
+        // Subtle haptic when results actually change
+        let signature = results.compactMap { $0.value?.formatted }.joined(separator: "|")
+        if signature != previousResultSignature && !previousResultSignature.isEmpty {
+            hapticGenerator.selectionChanged()
+        }
+        previousResultSignature = signature
+
         // Auto-save
         saveCurrentNote()
     }
