@@ -26,6 +26,7 @@ struct NumiTextEditor: UIViewRepresentable {
     func makeUIView(context: Context) -> NumiTextEditorView {
         let view = NumiTextEditorView()
         view.textView.delegate = context.coordinator
+        context.coordinator.editorView = view
         view.editorFont = font
         view.defaultTextColor = textColor
         view.variableColor = variableColor
@@ -61,6 +62,10 @@ struct NumiTextEditor: UIViewRepresentable {
         uiView.formattingConfig = formattingConfig
         uiView.setShowLineNumbers(showLineNumbers)
 
+        // Keep suggestion engine's variable list up to date
+        let variableNames = results.compactMap { $0.assignmentVariable }
+        uiView.updateVariableNames(variableNames)
+
         // Only update text if it actually changed (avoid cursor jumping)
         let currentPlain = uiView.textView.text ?? ""
         if currentPlain != text {
@@ -76,6 +81,7 @@ struct NumiTextEditor: UIViewRepresentable {
     class Coordinator: NSObject, UITextViewDelegate {
         var parent: NumiTextEditor
         var isUpdating = false
+        weak var editorView: NumiTextEditorView?
 
         init(_ parent: NumiTextEditor) {
             self.parent = parent
@@ -84,6 +90,12 @@ struct NumiTextEditor: UIViewRepresentable {
         func textViewDidChange(_ textView: UITextView) {
             guard !isUpdating else { return }
             parent.text = textView.text
+            editorView?.updateSuggestionsForCursor()
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            guard !isUpdating else { return }
+            editorView?.updateSuggestionsForCursor()
         }
     }
 }
@@ -102,6 +114,12 @@ class NumiTextEditorView: UIView {
     var functionColor: UIColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
     var commentColor: UIColor = UIColor(white: 0.35, alpha: 0.8)
     var formattingConfig: FormattingConfig = .default
+
+    // Suggestion engine for autocomplete
+    private var suggestionEngine = SuggestionEngine()
+    private var operatorScrollView: UIScrollView!
+    private var suggestionScrollView: UIScrollView!
+    private var suggestionStack: UIStackView!
 
     private static let gutterWidth: CGFloat = 32
     private var isLineNumbersVisible = false
@@ -277,73 +295,110 @@ class NumiTextEditorView: UIView {
             border.heightAnchor.constraint(equalToConstant: 0.5),
         ])
 
+        // --- Operator scroll view (default) ---
+        let opScroll = UIScrollView()
+        opScroll.showsHorizontalScrollIndicator = false
+        opScroll.translatesAutoresizingMaskIntoConstraints = false
+        toolbar.addSubview(opScroll)
+        NSLayoutConstraint.activate([
+            opScroll.topAnchor.constraint(equalTo: toolbar.topAnchor, constant: 1),
+            opScroll.leadingAnchor.constraint(equalTo: toolbar.leadingAnchor),
+            opScroll.trailingAnchor.constraint(equalTo: toolbar.trailingAnchor),
+            opScroll.bottomAnchor.constraint(equalTo: toolbar.bottomAnchor),
+        ])
+        operatorScrollView = opScroll
+
         let items: [(String, String)] = [
             ("+", "+"), ("−", "-"), ("×", "*"), ("÷", "/"),
             ("^", "^"), ("(", "("), (")", ")"), ("=", " = "),
             ("%", "%"), ("$", "$"), ("in", " in "),
         ]
 
-        let scrollView = UIScrollView()
-        scrollView.showsHorizontalScrollIndicator = false
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        toolbar.addSubview(scrollView)
+        let opStack = UIStackView()
+        opStack.axis = .horizontal
+        opStack.spacing = 2
+        opStack.translatesAutoresizingMaskIntoConstraints = false
+        opScroll.addSubview(opStack)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: toolbar.topAnchor, constant: 1),
-            scrollView.leadingAnchor.constraint(equalTo: toolbar.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: toolbar.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: toolbar.bottomAnchor),
-        ])
-
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.spacing = 2
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 4),
-            stack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -4),
-            stack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            stack.heightAnchor.constraint(equalTo: scrollView.heightAnchor),
+            opStack.topAnchor.constraint(equalTo: opScroll.topAnchor),
+            opStack.leadingAnchor.constraint(equalTo: opScroll.leadingAnchor, constant: 4),
+            opStack.trailingAnchor.constraint(equalTo: opScroll.trailingAnchor, constant: -4),
+            opStack.bottomAnchor.constraint(equalTo: opScroll.bottomAnchor),
+            opStack.heightAnchor.constraint(equalTo: opScroll.heightAnchor),
         ])
 
         let buttonColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
         let buttonBg = UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1)
 
         for (label, insert) in items {
-            let button = UIButton(type: .system)
-            button.setTitle(label, for: .normal)
-            button.titleLabel?.font = .monospacedSystemFont(ofSize: 16, weight: .medium)
-            button.setTitleColor(buttonColor, for: .normal)
-            button.backgroundColor = buttonBg
-            button.layer.cornerRadius = 6
-            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 36).isActive = true
-            if #available(iOS 15.0, *) {
-                var config = UIButton.Configuration.plain()
-                config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 10, bottom: 4, trailing: 10)
-                config.baseForegroundColor = buttonColor
-                config.background.backgroundColor = buttonBg
-                config.background.cornerRadius = 6
-                button.configuration = config
-            } else {
-                button.contentEdgeInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
-            }
-
-            // Store insert text in accessibilityIdentifier (lightweight tag approach)
-            button.accessibilityIdentifier = insert
-            button.addTarget(self, action: #selector(toolbarButtonTapped(_:)), for: .touchUpInside)
-            stack.addArrangedSubview(button)
+            let button = makeToolbarButton(label: label, insertText: insert,
+                                           color: buttonColor, bg: buttonBg,
+                                           action: #selector(toolbarButtonTapped(_:)))
+            opStack.addArrangedSubview(button)
         }
 
-        // Dismiss keyboard button at the end
+        // Dismiss keyboard button at the end of operator bar
         let dismissButton = UIButton(type: .system)
         dismissButton.setImage(UIImage(systemName: "keyboard.chevron.compact.down"), for: .normal)
         dismissButton.tintColor = UIColor(red: 0.0, green: 0.5, blue: 0.2, alpha: 1)
         dismissButton.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
         dismissButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
-        stack.addArrangedSubview(dismissButton)
+        opStack.addArrangedSubview(dismissButton)
+
+        // --- Suggestion scroll view (hidden by default) ---
+        let sugScroll = UIScrollView()
+        sugScroll.showsHorizontalScrollIndicator = false
+        sugScroll.translatesAutoresizingMaskIntoConstraints = false
+        sugScroll.isHidden = true
+        toolbar.addSubview(sugScroll)
+        NSLayoutConstraint.activate([
+            sugScroll.topAnchor.constraint(equalTo: toolbar.topAnchor, constant: 1),
+            sugScroll.leadingAnchor.constraint(equalTo: toolbar.leadingAnchor),
+            sugScroll.trailingAnchor.constraint(equalTo: toolbar.trailingAnchor),
+            sugScroll.bottomAnchor.constraint(equalTo: toolbar.bottomAnchor),
+        ])
+        suggestionScrollView = sugScroll
+
+        let sugStack = UIStackView()
+        sugStack.axis = .horizontal
+        sugStack.spacing = 2
+        sugStack.translatesAutoresizingMaskIntoConstraints = false
+        sugScroll.addSubview(sugStack)
+        NSLayoutConstraint.activate([
+            sugStack.topAnchor.constraint(equalTo: sugScroll.topAnchor),
+            sugStack.leadingAnchor.constraint(equalTo: sugScroll.leadingAnchor, constant: 4),
+            sugStack.trailingAnchor.constraint(equalTo: sugScroll.trailingAnchor, constant: -4),
+            sugStack.bottomAnchor.constraint(equalTo: sugScroll.bottomAnchor),
+            sugStack.heightAnchor.constraint(equalTo: sugScroll.heightAnchor),
+        ])
+        suggestionStack = sugStack
 
         return toolbar
+    }
+
+    private func makeToolbarButton(label: String, insertText: String,
+                                    color: UIColor, bg: UIColor,
+                                    action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(label, for: .normal)
+        button.titleLabel?.font = .monospacedSystemFont(ofSize: 16, weight: .medium)
+        button.setTitleColor(color, for: .normal)
+        button.backgroundColor = bg
+        button.layer.cornerRadius = 6
+        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 36).isActive = true
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 10, bottom: 4, trailing: 10)
+            config.baseForegroundColor = color
+            config.background.backgroundColor = bg
+            config.background.cornerRadius = 6
+            button.configuration = config
+        } else {
+            button.contentEdgeInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        }
+        button.accessibilityIdentifier = insertText
+        button.addTarget(self, action: action, for: .touchUpInside)
+        return button
     }
 
     @objc private func toolbarButtonTapped(_ sender: UIButton) {
@@ -353,6 +408,112 @@ class NumiTextEditorView: UIView {
 
     @objc private func dismissKeyboard() {
         textView.resignFirstResponder()
+    }
+
+    // MARK: - Suggestions
+
+    /// Updates toolbar to show suggestion chips, or reverts to operator bar
+    func updateSuggestions(_ suggestions: [Suggestion]) {
+        if suggestions.isEmpty {
+            // Show operator bar
+            operatorScrollView.isHidden = false
+            suggestionScrollView.isHidden = true
+            return
+        }
+
+        // Show suggestion bar
+        operatorScrollView.isHidden = true
+        suggestionScrollView.isHidden = false
+
+        // Rebuild chips
+        suggestionStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        let chipColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
+        let chipBg = UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1)
+
+        for suggestion in suggestions {
+            let button = makeToolbarButton(label: suggestion.text, insertText: suggestion.text,
+                                            color: chipColor, bg: chipBg,
+                                            action: #selector(suggestionChipTapped(_:)))
+            suggestionStack.addArrangedSubview(button)
+        }
+
+        // Dismiss button at end of suggestion bar too
+        let dismissButton = UIButton(type: .system)
+        dismissButton.setImage(UIImage(systemName: "keyboard.chevron.compact.down"), for: .normal)
+        dismissButton.tintColor = UIColor(red: 0.0, green: 0.5, blue: 0.2, alpha: 1)
+        dismissButton.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
+        dismissButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        suggestionStack.addArrangedSubview(dismissButton)
+
+        suggestionScrollView.contentOffset = .zero
+    }
+
+    @objc private func suggestionChipTapped(_ sender: UIButton) {
+        guard let completion = sender.accessibilityIdentifier else { return }
+        completeSuggestion(completion)
+    }
+
+    /// Replaces the partial word at cursor with the full suggestion + trailing space
+    func completeSuggestion(_ text: String) {
+        guard let wordInfo = currentWordPrefix(in: textView) else {
+            textView.insertText(text + " ")
+            return
+        }
+        // Replace the partial word range with the completion
+        if let start = textView.position(from: textView.beginningOfDocument, offset: wordInfo.range.location),
+           let end = textView.position(from: start, offset: wordInfo.range.length),
+           let range = textView.textRange(from: start, to: end) {
+            textView.replace(range, withText: text + " ")
+        }
+    }
+
+    /// Extracts the partial word prefix at the current cursor position
+    func currentWordPrefix(in tv: UITextView) -> (prefix: String, range: NSRange)? {
+        guard let selectedRange = tv.selectedTextRange,
+              selectedRange.isEmpty else { return nil }
+        let cursorOffset = tv.offset(from: tv.beginningOfDocument, to: selectedRange.start)
+        let text = tv.text ?? ""
+        let utf16 = text.utf16
+        guard cursorOffset > 0 && cursorOffset <= utf16.count else { return nil }
+
+        // Walk backward from cursor to find start of word
+        var startOffset = cursorOffset
+        while startOffset > 0 {
+            let idx = utf16.index(utf16.startIndex, offsetBy: startOffset - 1)
+            let char = Character(UnicodeScalar(utf16[idx])!)
+            if char.isLetter || char.isNumber || char == "_" {
+                startOffset -= 1
+            } else {
+                break
+            }
+        }
+
+        guard startOffset < cursorOffset else { return nil }
+
+        let range = NSRange(location: startOffset, length: cursorOffset - startOffset)
+        let nsText = text as NSString
+        let word = nsText.substring(with: range)
+
+        // Only suggest if it's at least 2 chars
+        guard word.count >= 2 else { return nil }
+
+        return (prefix: word, range: range)
+    }
+
+    /// Queries suggestion engine for the word at cursor and updates toolbar
+    func updateSuggestionsForCursor() {
+        guard let wordInfo = currentWordPrefix(in: textView) else {
+            updateSuggestions([])
+            return
+        }
+        let suggestions = suggestionEngine.suggest(prefix: wordInfo.prefix)
+        updateSuggestions(suggestions)
+    }
+
+    /// Updates the variable names available for suggestion
+    func updateVariableNames(_ names: [String]) {
+        suggestionEngine.updateVariables(names)
     }
 
     // MARK: - Copy to Clipboard

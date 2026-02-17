@@ -99,6 +99,19 @@ final class ConstantsTests: XCTestCase {
     func testSpeedOfLight() {
         let results = parser.evaluateAll("speedoflight")
         XCTAssertEqual(results[0].value?.number, 299_792_458)
+        XCTAssertEqual(results[0].value?.unit, .metersPerSecond)
+    }
+
+    func testSpeedOfLightConversion() {
+        let results = parser.evaluateAll("speedoflight in km/h")
+        XCTAssertEqual(results[0].value?.number ?? 0, 1_079_252_848.8, accuracy: 0.1)
+        XCTAssertEqual(results[0].value?.unit, .kilometersPerHour)
+    }
+
+    func testSpeedOfLightInMph() {
+        let results = parser.evaluateAll("speedoflight in miles/h")
+        XCTAssertEqual(results[0].value?.number ?? 0, 670_616_629.4, accuracy: 0.1)
+        XCTAssertEqual(results[0].value?.unit, .milesPerHour)
     }
 
     func testAvogadro() {
@@ -155,6 +168,30 @@ final class SpeedUnitTests: XCTestCase {
         let results = parser.evaluateAll("100 knots in mph")
         XCTAssertEqual(results[0].value?.number ?? 0, 115.08, accuracy: 0.1)
         XCTAssertEqual(results[0].value?.unit, .milesPerHour)
+    }
+
+    func testCompoundSlashKmH() {
+        let results = parser.evaluateAll("100 km/h in mph")
+        XCTAssertEqual(results[0].value?.number ?? 0, 62.14, accuracy: 0.1)
+        XCTAssertEqual(results[0].value?.unit, .milesPerHour)
+    }
+
+    func testCompoundSlashMS() {
+        let results = parser.evaluateAll("10 m/s in km/h")
+        XCTAssertEqual(results[0].value?.number ?? 0, 36.0, accuracy: 0.1)
+        XCTAssertEqual(results[0].value?.unit, .kilometersPerHour)
+    }
+
+    func testCompoundSlashFtS() {
+        let results = parser.evaluateAll("100 ft/s in kph")
+        XCTAssertEqual(results[0].value?.number ?? 0, 109.73, accuracy: 0.1)
+        XCTAssertEqual(results[0].value?.unit, .kilometersPerHour)
+    }
+
+    func testCompoundSlashMilesH() {
+        let results = parser.evaluateAll("60 miles/h in km/h")
+        XCTAssertEqual(results[0].value?.number ?? 0, 96.56, accuracy: 0.1)
+        XCTAssertEqual(results[0].value?.unit, .kilometersPerHour)
     }
 }
 

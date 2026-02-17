@@ -581,6 +581,14 @@ enum Keyword: String, Equatable {
     case echarge = "echarge"
     case phi = "phi"
     case tau = "tau"
+    // Natural language
+    case split = "split"
+    case between = "between"
+    case among = "among"
+    case ways = "ways"
+    case people = "people"
+    case tip = "tip"
+    case tax = "tax"
 }
 
 // MARK: - Line Result

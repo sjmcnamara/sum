@@ -215,6 +215,34 @@ struct Tokenizer {
             if ch == "/" {
                 let next = input.index(after: i)
                 if next < input.endIndex && input[next] == "/" { break }
+
+                // Compound speed units: km/h, m/s, miles/h, mi/h, ft/s
+                if let lastToken = tokens.last, case .unit(let u) = lastToken, next < input.endIndex {
+                    let suffix = input[next].lowercased()
+                    var speedUnit: NumiUnit?
+                    if suffix == "h" {
+                        switch u {
+                        case .kilometer: speedUnit = .kilometersPerHour
+                        case .mile: speedUnit = .milesPerHour
+                        default: break
+                        }
+                    } else if suffix == "s" {
+                        switch u {
+                        case .meter: speedUnit = .metersPerSecond
+                        case .foot: speedUnit = .feetPerSecond
+                        default: break
+                        }
+                    }
+                    if let speed = speedUnit {
+                        let afterSuffix = input.index(after: next)
+                        // Word boundary check
+                        if afterSuffix >= input.endIndex || !input[afterSuffix].isLetter {
+                            tokens[tokens.count - 1] = .unit(speed)
+                            i = afterSuffix
+                            continue
+                        }
+                    }
+                }
             }
 
             // Skip whitespace
@@ -369,6 +397,23 @@ struct Tokenizer {
                 if next < input.endIndex && input[next] == "/" {
                     ranges.append(TokenRange(kind: .comment, range: nsRange(from: i, to: input.endIndex)))
                     break
+                }
+
+                // Compound speed units: km/h, m/s, miles/h, mi/h, ft/s
+                if let lastRange = ranges.last, lastRange.kind == .unit, next < input.endIndex {
+                    let suffix = input[next].lowercased()
+                    let isSpeed = (suffix == "h" || suffix == "s")
+                    if isSpeed {
+                        let afterSuffix = input.index(after: next)
+                        if afterSuffix >= input.endIndex || !input[afterSuffix].isLetter {
+                            // Extend the previous unit range to include /h or /s
+                            let extended = NSRange(location: lastRange.range.location,
+                                                   length: lastRange.range.length + 2)
+                            ranges[ranges.count - 1] = TokenRange(kind: .unit, range: extended)
+                            i = afterSuffix
+                            continue
+                        }
+                    }
                 }
             }
 
@@ -655,6 +700,14 @@ struct Tokenizer {
         case "echarge": return (.keyword(.echarge), i)
         case "phi", "golden": return (.keyword(.phi), i)
         case "tau": return (.keyword(.tau), i)
+        // Natural language keywords
+        case "split": return (.keyword(.split), i)
+        case "between": return (.keyword(.between), i)
+        case "among": return (.keyword(.among), i)
+        case "ways": return (.keyword(.ways), i)
+        case "people": return (.keyword(.people), i)
+        case "tip": return (.keyword(.tip), i)
+        case "tax": return (.keyword(.tax), i)
         default: break
         }
 
