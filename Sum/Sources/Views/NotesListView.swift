@@ -7,10 +7,6 @@ struct NotesListView: View {
     @State private var editingName: String = ""
     @State private var searchText: String = ""
 
-    private let bgColor = Color(red: 0.05, green: 0.05, blue: 0.05)
-    private let textGreen = Color(red: 0.0, green: 0.9, blue: 0.3)
-    private let dimGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
-    private let resultGreen = Color(red: 0.0, green: 1.0, blue: 0.4)
 
     /// Notes filtered by search text (matches title or content)
     private var filteredNotes: [(index: Int, note: Note)] {
@@ -32,7 +28,7 @@ struct NotesListView: View {
             List {
                 ForEach(filteredNotes, id: \.note.id) { index, note in
                     noteRow(note: note, index: index)
-                        .listRowBackground(bgColor)
+                        .listRowBackground(NumiTheme.background)
                 }
                 .onDelete { indexSet in
                     // Map filtered indices back to model indices
@@ -45,15 +41,15 @@ struct NotesListView: View {
             }
             .searchable(text: $searchText, prompt: "Search notes")
             .scrollContentBackground(.hidden)
-            .background(bgColor)
+            .background(NumiTheme.background)
             .navigationTitle("Notes")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(bgColor, for: .navigationBar)
+            .toolbarBackground(NumiTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(textGreen)
+                        .foregroundColor(NumiTheme.textGreen)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -61,7 +57,7 @@ struct NotesListView: View {
                         dismiss()
                     }) {
                         Image(systemName: "plus")
-                            .foregroundColor(textGreen)
+                            .foregroundColor(NumiTheme.textGreen)
                     }
                 }
             }
@@ -81,21 +77,21 @@ struct NotesListView: View {
                         editingNoteId = nil
                     })
                     .textFieldStyle(.plain)
-                    .foregroundColor(textGreen)
+                    .foregroundColor(NumiTheme.textGreen)
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(note.title)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundColor(textGreen)
+                            .foregroundColor(NumiTheme.textGreen)
                         if let preview = contentPreview(note) {
                             Text(preview)
                                 .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(dimGreen.opacity(0.8))
+                                .foregroundColor(NumiTheme.dimGreen.opacity(0.8))
                                 .lineLimit(1)
                         }
                         Text(formattedDate(note.updatedAt))
                             .font(.system(.caption2, design: .monospaced))
-                            .foregroundColor(dimGreen.opacity(0.5))
+                            .foregroundColor(NumiTheme.dimGreen.opacity(0.5))
                     }
                 }
 
@@ -103,7 +99,7 @@ struct NotesListView: View {
 
                 if index == viewModel.currentNoteIndex {
                     Image(systemName: "checkmark")
-                        .foregroundColor(resultGreen)
+                        .foregroundColor(NumiTheme.resultGreen)
                         .font(.system(size: 14, weight: .semibold))
                 }
             }

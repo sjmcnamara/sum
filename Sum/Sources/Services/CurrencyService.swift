@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Fetches and caches fiat and crypto exchange rates
 actor CurrencyService {
@@ -7,6 +8,7 @@ actor CurrencyService {
     private var rates: [String: Double] = [:]
     private var lastFetch: Date?
     private let cacheInterval: TimeInterval = 300 // 5 min for crypto freshness
+    private(set) var isUsingFallback: Bool = false
 
     // Fallback fiat rates (approximate, used when offline)
     private let fallbackFiatRates: [String: Double] = [
@@ -60,10 +62,14 @@ actor CurrencyService {
         var merged: [String: Double] = [:]
 
         // Merge fiat rates
+        var usingFallback = false
         if let fiat = try? await fiatResult {
             merged.merge(fiat) { _, new in new }
+            NumiLogger.currency.info("Fetched \(fiat.count) fiat rates")
         } else {
             merged.merge(fallbackFiatRates) { _, new in new }
+            NumiLogger.currency.warning("Fiat fetch failed, using fallback rates")
+            usingFallback = true
         }
 
         // Merge crypto — store as "price of 1 crypto in USD"
@@ -75,8 +81,11 @@ actor CurrencyService {
         let cryptoPrices: [String: Double]
         if let fetched = try? await cryptoResult {
             cryptoPrices = fetched
+            NumiLogger.currency.info("Fetched \(fetched.count) crypto prices")
         } else {
             cryptoPrices = fallbackCryptoPrices
+            NumiLogger.currency.warning("Crypto fetch failed, using fallback prices")
+            usingFallback = true
         }
 
         for (ticker, priceUSD) in cryptoPrices where priceUSD > 0 {
@@ -88,6 +97,7 @@ actor CurrencyService {
 
         self.rates = merged
         self.lastFetch = Date()
+        self.isUsingFallback = usingFallback
         return merged
     }
 

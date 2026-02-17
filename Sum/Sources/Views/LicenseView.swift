@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct LicenseView: View {
-    private let bgColor = Color(red: 0.05, green: 0.05, blue: 0.05)
-    private let dimGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
 
     private let licenseText = """
         MIT License
@@ -34,18 +32,18 @@ struct LicenseView: View {
 
     var body: some View {
         ZStack {
-            bgColor.ignoresSafeArea()
+            NumiTheme.background.ignoresSafeArea()
 
             ScrollView {
                 Text(licenseText)
                     .font(.system(size: 13, weight: .regular, design: .monospaced))
-                    .foregroundColor(dimGreen)
+                    .foregroundColor(NumiTheme.dimGreen)
                     .padding(16)
             }
         }
         .navigationTitle("License")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(bgColor, for: .navigationBar)
+        .toolbarBackground(NumiTheme.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }
 }

@@ -29,6 +29,12 @@
 - Compound speed unit syntax: `km/h`, `m/s`, `miles/h`, `ft/s`
 - Fix: `speedoflight` now carries m/s unit for proper conversions
 
+### v1.4.1 — Refactoring, Performance & Crash Resilience
+- Fix UTF-16 crash, NoteStorage corruption resilience
+- Debounce recalculate, O(1) unit lookup
+- os.Logger infrastructure, unified tokenizer, NumiTheme color constants
+- 14 new edge case tests (186 total)
+
 ---
 
 ## Upcoming

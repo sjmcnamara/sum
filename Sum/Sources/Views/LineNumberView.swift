@@ -10,7 +10,7 @@ class LineNumberView: UIView {
 
     var lines: [LineInfo] = []
     var font: UIFont = .monospacedSystemFont(ofSize: 12, weight: .regular)
-    var textColor: UIColor = UIColor(red: 0.0, green: 0.4, blue: 0.2, alpha: 0.5)
+    var textColor: UIColor = NumiTheme.uiLineNumber
 
     override func draw(_ rect: CGRect) {
         let paragraphStyle = NSMutableParagraphStyle()

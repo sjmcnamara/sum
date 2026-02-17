@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The main expression parser and evaluator
 class NumiParser {
@@ -8,7 +9,12 @@ class NumiParser {
     private var emSize: Double = 16 // default em in pixels
     private var ppi: Double = 96 // default pixels per inch
 
-    var currencyRates: [String: Double] = [:] // rates relative to USD
+    /// Currency exchange rates relative to USD. Must only be set from @MainActor context.
+    private(set) var currencyRates: [String: Double] = [:]
+
+    func setCurrencyRates(_ rates: [String: Double]) {
+        currencyRates = rates
+    }
 
     // MARK: - Public API
 
@@ -33,6 +39,7 @@ class NumiParser {
                 previousResults.append(value)
             } catch {
                 let errorMsg = describeError(error)
+                NumiLogger.parser.debug("Line \(index): \(errorMsg) for: \(trimmed)")
                 results.append(LineResult(id: index, input: line, value: nil, error: errorMsg, assignmentVariable: nil))
                 previousResults.append(nil)
             }
@@ -776,6 +783,7 @@ class NumiParser {
     }
 
     private func factorial(_ n: Int) -> Double {
+        guard n >= 0 else { return 1 } // defense in depth
         if n <= 1 { return 1 }
         return Double(n) * factorial(n - 1)
     }

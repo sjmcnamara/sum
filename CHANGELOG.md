@@ -1,5 +1,28 @@
 # Changelog
 
+## Sum 1.4.1 (2026-02-17)
+
+- Crash fixes
+  - Fix UTF-16 force unwrap crash in word prefix extraction (emoji/surrogate pairs)
+  - NoteStorage: corrupted JSON now returns default note instead of crash, backs up bad data
+  - Factorial: defense in depth guard on negative input
+- Performance
+  - Debounce recalculate (50ms) to prevent redundant parsing during fast typing
+  - Unit lookup: O(1) dictionary for single-word units (was O(120) linear scan)
+- Logging
+  - Added `os.Logger` infrastructure (parser, storage, currency categories)
+  - Parser error logging, NoteStorage corruption logging, CurrencyService fetch logging
+  - CurrencyService tracks fallback state for future UI indication
+- Refactoring
+  - Unified tokenizer: `tokenize()` and `tokenizeWithRanges()` share single `tokenizeInternal()` (~280 lines removed)
+  - Extracted `NumiTheme` enum with shared color constants (eliminates ~20 duplicated declarations across 7 views)
+  - Thread-safe currency rates via `setCurrencyRates(_:)` setter
+  - Testable `wordPrefix(in:cursorUTF16Offset:)` static helper
+- 14 new tests (186 total)
+  - Factorial edge cases (zero, negative, too large, non-integer)
+  - Modulo by zero, corrupted notes recovery, tokenizer consistency
+  - Compound unit highlight range, word prefix with emoji
+
 ## [Sum 1.4.0](https://github.com/sjmcnamara/sum/releases/tag/v1.4.0) (2026-02-17)
 
 - Natural language queries

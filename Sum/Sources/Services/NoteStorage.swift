@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Persists notes to UserDefaults (lightweight, no CoreData needed)
 class NoteStorage {
@@ -6,20 +7,39 @@ class NoteStorage {
 
     private let notesKey = "org.sum.notes"
     private let indexKey = "org.sum.currentNoteIndex"
-    private let defaults = UserDefaults.standard
+    let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     func loadNotes() -> [Note] {
-        guard let data = defaults.data(forKey: notesKey),
-              let notes = try? JSONDecoder().decode([Note].self, from: data) else {
-            // Return a default note on first launch
+        guard let data = defaults.data(forKey: notesKey) else {
+            NumiLogger.storage.info("No saved notes found, returning default")
             return [Note(title: "Calculator", content: "")]
         }
-        return notes
+        do {
+            let notes = try JSONDecoder().decode([Note].self, from: data)
+            NumiLogger.storage.debug("Loaded \(notes.count) notes")
+            return notes
+        } catch {
+            NumiLogger.storage.error("Failed to decode notes: \(error.localizedDescription)")
+            // Back up corrupted data for diagnosis
+            let backupKey = notesKey + ".backup"
+            if defaults.data(forKey: backupKey) == nil {
+                defaults.set(data, forKey: backupKey)
+                NumiLogger.storage.warning("Backed up corrupted notes data to \(backupKey)")
+            }
+            return [Note(title: "Calculator", content: "")]
+        }
     }
 
     func saveNotes(_ notes: [Note]) {
-        if let data = try? JSONEncoder().encode(notes) {
+        do {
+            let data = try JSONEncoder().encode(notes)
             defaults.set(data, forKey: notesKey)
+        } catch {
+            NumiLogger.storage.error("Failed to encode notes: \(error.localizedDescription)")
         }
     }
 
