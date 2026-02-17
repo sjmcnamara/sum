@@ -19,6 +19,7 @@ struct CalculatorView: View {
     private let uiVarBlue = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)
     private let uiKeywordColor = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
     private let uiFunctionColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
+    private let uiCommentColor = UIColor(white: 0.35, alpha: 0.8)
 
     var body: some View {
         NavigationStack {
@@ -35,6 +36,7 @@ struct CalculatorView: View {
                     variableColor: uiVarBlue,
                     keywordColor: uiKeywordColor,
                     functionColor: uiFunctionColor,
+                    commentColor: uiCommentColor,
                     backgroundColor: uiBgColor,
                     font: .monospacedSystemFont(ofSize: 17, weight: .regular)
                 )

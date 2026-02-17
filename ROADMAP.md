@@ -15,19 +15,17 @@
 - Line numbers, syntax highlighting
 - Settings panel reorganized, case-insensitive currency codes
 
+### v1.3.0 — Power Features
+- Comments (`//` and `#`), bitwise NOT (`~`, `not`)
+- Constants library (speedoflight, avogadro, planck, boltzmann, echarge, gravity, phi, tau)
+- Speed units (mph, kph, mps, knots, fps)
+- Pressure units (pascal, bar, atm, psi, mmHg, torr)
+- Energy units (joule, kilojoule, calorie, kilocalorie, watt-hour, kilowatt-hour, BTU, electronvolt)
+- Word operators (mod, xor, not) highlighted as keywords
+
 ---
 
 ## Upcoming
-
-### v1.3 — Power Features
-- Custom functions — `f(x) = x^2 + 3x`
-- Conditional expressions — `if price > 100 then "expensive" else "cheap"`
-- Comments — `// this is a comment` or `# ignored line`
-- Bitwise operators — AND, OR, XOR, NOT, shift operators
-- Modular arithmetic — `17 mod 5` (exists but could be more discoverable)
-- Base conversions — `0xFF in decimal`, `255 in octal` (partially done)
-- Constants library — speed of light, Avogadro's number, gravitational constant
-- More units — area (acres, hectares), volume (liters, gallons), speed (mph, km/h), pressure, energy
 
 ### v1.4 — Sharing & Export
 - Share sheet — export a note as plain text or formatted image
@@ -36,13 +34,9 @@
 - iCloud sync — notes available across iPhone and iPad
 - Widget — home screen widget showing a pinned calculation or live currency rate
 
-### v1.5 — iPad & Multi-platform
-- iPad layout — sidebar for notes, larger editor area
-- Split view / multitasking — drag expressions from other apps
-- macOS target — Catalyst or native SwiftUI (full circle back to Numi's root)
-- Apple Watch complication — quick currency rate or pinned result
-
 ### v2.0 — Intelligence
+- Custom functions — `f(x) = x^2 + 3x`
+- Conditional expressions — `if price > 100 then "expensive" else "cheap"`
 - Natural language queries — `what's 20% tip on $85 split 3 ways`
 - Smart suggestions — autocomplete units, currencies, variables
 - Frequently used conversions — learn from usage patterns

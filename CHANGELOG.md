@@ -1,5 +1,17 @@
 # Changelog
 
+## [Sum 1.3.0](https://github.com/sjmcnamara/sum/releases/tag/v1.3.0) (2026-02-17)
+
+- Power features
+  - Comments: `// comment` and `# comment` (full-line and inline)
+  - Bitwise NOT operator: `~0xFF` or `not 255`
+  - Word operators (`mod`, `xor`, `not`) now highlighted as keywords
+  - Constants library: `speedoflight`, `avogadro`, `planck`, `boltzmann`, `echarge`, `gravity`, `phi`, `tau` (with aliases `lightspeed`, `na`, `golden`)
+  - Speed units: mph, kph, mps, knots, fps (with full names)
+  - Pressure units: pascal, kilopascal, bar, atmosphere, psi, mmHg, torr
+  - Energy units: joule, kilojoule, calorie, kilocalorie, watt-hour, kilowatt-hour, BTU, electronvolt
+  - 25 new tests (144 total, passing on both Xcode 16.1 and 26.2)
+
 ## [Sum 1.2.0](https://github.com/sjmcnamara/sum/releases/tag/v1.2.0) (2026-02-17)
 
 - Formatting & display enhancements

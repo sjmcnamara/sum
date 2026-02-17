@@ -7,7 +7,7 @@ struct AboutView: View {
     private let dimGreen = Color(red: 0.0, green: 0.5, blue: 0.2)
 
     private var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3.0"
     }
 
     private var build: String {
