@@ -3,6 +3,7 @@ import SwiftUI
 struct CalculatorView: View {
     @StateObject private var viewModel = CalculatorViewModel()
     @State private var showNotesList = false
+    @State private var showSettings = false
     @State private var showCopiedTotal = false
 
     // Green-on-black theme colors
@@ -50,6 +51,10 @@ struct CalculatorView: View {
                         Button(action: { showNotesList = true }) {
                             Label("All Notes", systemImage: "list.bullet")
                         }
+                        Divider()
+                        Button(action: { showSettings = true }) {
+                            Label("Settings", systemImage: "gearshape")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .foregroundColor(dimGreen)
@@ -58,6 +63,9 @@ struct CalculatorView: View {
             }
             .sheet(isPresented: $showNotesList) {
                 NotesListView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
         }
         .preferredColorScheme(.dark)
