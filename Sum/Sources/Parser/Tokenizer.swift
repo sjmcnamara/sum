@@ -1,5 +1,22 @@
 import Foundation
 
+/// Highlight kind for syntax coloring in the editor
+enum TokenHighlightKind: Equatable {
+    case keyword    // in, to, as, of, pi, e, etc.
+    case function   // sqrt, sin, cos, log, etc.
+    case variable   // user-defined variables
+    case number     // numeric literals (including hex/bin/oct)
+    case op         // operators (+, -, *, /, =, etc.)
+    case unit       // units (km, kg, USD, etc.)
+    case plain      // whitespace, parens, commas, unrecognized
+}
+
+/// A token's highlight kind paired with its range in the source string
+struct TokenRange: Equatable {
+    let kind: TokenHighlightKind
+    let range: NSRange
+}
+
 /// Tokenizes a line of text into tokens for the parser
 struct Tokenizer {
 
@@ -291,6 +308,136 @@ struct Tokenizer {
         return tokens
     }
 
+    // MARK: - Token Ranges for Syntax Highlighting
+
+    /// Tokenizes the input and returns highlight ranges for syntax coloring.
+    /// Mirrors `tokenize` logic but tracks source positions.
+    func tokenizeWithRanges(_ input: String) -> [TokenRange] {
+        var ranges: [TokenRange] = []
+        var i = input.startIndex
+
+        func nsRange(from start: String.Index, to end: String.Index) -> NSRange {
+            let loc = input.distance(from: input.startIndex, to: start)
+            let len = input.distance(from: start, to: end)
+            return NSRange(location: loc, length: len)
+        }
+
+        while i < input.endIndex {
+            let ch = input[i]
+
+            // Skip whitespace (no range emitted)
+            if ch.isWhitespace {
+                i = input.index(after: i)
+                continue
+            }
+
+            // Currency symbol prefix ($100, €50, ₿1.5, Ξ10, etc.)
+            if let currencyCode = Self.currencySymbols[String(ch)] {
+                let symbolStart = i
+                let next = input.index(after: i)
+                if next < input.endIndex && (input[next].isNumber || input[next] == ".") {
+                    ranges.append(TokenRange(kind: .unit, range: nsRange(from: symbolStart, to: next)))
+                    i = next
+                    continue
+                }
+                if currencyCode == "BTC" || currencyCode == "ETH" {
+                    ranges.append(TokenRange(kind: .unit, range: nsRange(from: symbolStart, to: next)))
+                    i = next
+                    continue
+                }
+            }
+
+            // R$ (Brazilian Real)
+            if ch == "R" {
+                let next = input.index(after: i)
+                if next < input.endIndex && input[next] == "$" {
+                    let afterSymbol = input.index(after: next)
+                    if afterSymbol < input.endIndex && (input[afterSymbol].isNumber || input[afterSymbol] == ".") {
+                        ranges.append(TokenRange(kind: .unit, range: nsRange(from: i, to: afterSymbol)))
+                        i = afterSymbol
+                        continue
+                    }
+                }
+            }
+
+            // Numbers (including hex, binary, octal)
+            if ch.isNumber || (ch == "." && i < input.endIndex) {
+                let numStart = i
+                let (num, endIdx, _) = parseNumber(input, from: i)
+                if num != nil {
+                    ranges.append(TokenRange(kind: .number, range: nsRange(from: numStart, to: endIdx)))
+                    i = endIdx
+                    continue
+                }
+            }
+
+            // Operators
+            if let opResult = parseOperator(input, from: i) {
+                let opStart = i
+                i = opResult.1
+                ranges.append(TokenRange(kind: .op, range: nsRange(from: opStart, to: i)))
+                continue
+            }
+
+            // Parentheses / comma
+            if ch == "(" || ch == ")" || ch == "," {
+                // plain — skip without emitting a highlight range
+                i = input.index(after: i)
+                continue
+            }
+
+            // Degree symbol
+            if ch == "°" {
+                let degStart = i
+                let next = input.index(after: i)
+                if next < input.endIndex {
+                    let nextCh = input[next].lowercased()
+                    if nextCh == "c" || nextCh == "f" {
+                        let afterUnit = input.index(after: next)
+                        ranges.append(TokenRange(kind: .unit, range: nsRange(from: degStart, to: afterUnit)))
+                        i = afterUnit
+                        continue
+                    }
+                }
+                ranges.append(TokenRange(kind: .unit, range: nsRange(from: degStart, to: next)))
+                i = next
+                continue
+            }
+
+            // Percent sign
+            if ch == "%" {
+                let pctStart = i
+                i = input.index(after: i)
+                ranges.append(TokenRange(kind: .unit, range: nsRange(from: pctStart, to: i)))
+                continue
+            }
+
+            // Words (identifiers, keywords, units, functions)
+            if ch.isLetter || ch == "_" {
+                let wordStart = i
+                let (token, endIdx) = parseWord(input, from: i)
+                let kind: TokenHighlightKind
+                switch token {
+                case .keyword: kind = .keyword
+                case .function: kind = .function
+                case .variable: kind = .variable
+                case .unit: kind = .unit
+                case .op: kind = .op
+                case .word: kind = .plain
+                default: kind = .plain
+                }
+                ranges.append(TokenRange(kind: kind, range: nsRange(from: wordStart, to: endIdx)))
+                i = endIdx
+                continue
+            }
+
+            // Skip unrecognized characters
+            i = input.index(after: i)
+        }
+
+        return ranges
+    }
+
     // MARK: - Number Parsing
 
     private func parseNumber(_ input: String, from start: String.Index) -> (Double?, String.Index, NumiUnit?) {
@@ -497,9 +644,10 @@ struct Tokenizer {
             }
         }
 
-        // Currency codes (case-sensitive for 3-letter codes)
-        if Self.currencyCodes.contains(word) {
-            return (.unit(.currency(word)), i)
+        // Currency codes (case-insensitive for 3-letter codes)
+        let upper = word.uppercased()
+        if Self.currencyCodes.contains(upper) {
+            return (.unit(.currency(upper)), i)
         }
 
         // Crypto names (check before fiat currency names since some overlap)

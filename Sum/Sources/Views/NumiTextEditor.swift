@@ -2,13 +2,19 @@ import SwiftUI
 import UIKit
 
 /// A UITextView wrapper that provides line-by-line text editing with results overlay
-/// and syntax highlighting (variable assignments in blue)
+/// and syntax highlighting (variable assignments in blue, keywords, functions)
 struct NumiTextEditor: UIViewRepresentable {
     @Binding var text: String
     var results: [LineResult]
+    var tokenRanges: [[TokenRange]]
+    var showLineNumbers: Bool
+    var syntaxHighlightingEnabled: Bool
+    var formattingConfig: FormattingConfig
     var resultColor: UIColor
     var textColor: UIColor
     var variableColor: UIColor
+    var keywordColor: UIColor
+    var functionColor: UIColor
     var backgroundColor: UIColor
     var font: UIFont
 
@@ -22,6 +28,8 @@ struct NumiTextEditor: UIViewRepresentable {
         view.editorFont = font
         view.defaultTextColor = textColor
         view.variableColor = variableColor
+        view.keywordColor = keywordColor
+        view.functionColor = functionColor
         view.textView.backgroundColor = backgroundColor
         view.textView.tintColor = resultColor // cursor color
         view.textView.autocorrectionType = .no
@@ -33,22 +41,31 @@ struct NumiTextEditor: UIViewRepresentable {
         view.textView.keyboardAppearance = .dark
         view.resultColor = resultColor
         view.resultsFont = font
-        view.setText(text, results: results)
+        view.formattingConfig = formattingConfig
+        view.setShowLineNumbers(showLineNumbers)
+        view.setText(text, results: results, tokenRanges: tokenRanges,
+                     syntaxHighlightingEnabled: syntaxHighlightingEnabled)
         return view
     }
 
     func updateUIView(_ uiView: NumiTextEditorView, context: Context) {
         uiView.defaultTextColor = textColor
         uiView.variableColor = variableColor
+        uiView.keywordColor = keywordColor
+        uiView.functionColor = functionColor
         uiView.textView.backgroundColor = backgroundColor
         uiView.resultColor = resultColor
+        uiView.formattingConfig = formattingConfig
+        uiView.setShowLineNumbers(showLineNumbers)
 
         // Only update text if it actually changed (avoid cursor jumping)
         let currentPlain = uiView.textView.text ?? ""
         if currentPlain != text {
-            uiView.setText(text, results: results)
+            uiView.setText(text, results: results, tokenRanges: tokenRanges,
+                           syntaxHighlightingEnabled: syntaxHighlightingEnabled)
         } else {
-            uiView.applyHighlighting(results: results)
+            uiView.applyHighlighting(results: results, tokenRanges: tokenRanges,
+                                     syntaxHighlightingEnabled: syntaxHighlightingEnabled)
             uiView.updateResults(results)
         }
     }
@@ -72,12 +89,18 @@ struct NumiTextEditor: UIViewRepresentable {
 class NumiTextEditorView: UIView {
     let textView = UITextView()
     private let resultsOverlay = ResultsOverlayView()
+    private let lineNumberView = LineNumberView()
     var resultColor: UIColor = .green
     var resultsFont: UIFont = .monospacedSystemFont(ofSize: 17, weight: .regular)
     var editorFont: UIFont = .monospacedSystemFont(ofSize: 17, weight: .regular)
     var defaultTextColor: UIColor = UIColor(red: 0.0, green: 0.9, blue: 0.3, alpha: 1)
     var variableColor: UIColor = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)
+    var keywordColor: UIColor = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
+    var functionColor: UIColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
+    var formattingConfig: FormattingConfig = .default
 
+    private static let gutterWidth: CGFloat = 32
+    private var isLineNumbersVisible = false
     private var currentResults: [LineResult] = []
     private let placeholderLabel = UILabel()
 
@@ -129,6 +152,12 @@ class NumiTextEditorView: UIView {
         }
         addSubview(resultsOverlay)
 
+        // Line number gutter (hidden by default)
+        lineNumberView.translatesAutoresizingMaskIntoConstraints = false
+        lineNumberView.backgroundColor = .clear
+        lineNumberView.isHidden = true
+        addSubview(lineNumberView)
+
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: topAnchor),
             textView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -139,6 +168,11 @@ class NumiTextEditorView: UIView {
             resultsOverlay.leadingAnchor.constraint(equalTo: leadingAnchor),
             resultsOverlay.trailingAnchor.constraint(equalTo: trailingAnchor),
             resultsOverlay.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            lineNumberView.topAnchor.constraint(equalTo: topAnchor),
+            lineNumberView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            lineNumberView.widthAnchor.constraint(equalToConstant: Self.gutterWidth),
+            lineNumberView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
 
         // Toast for copy feedback
@@ -197,6 +231,27 @@ class NumiTextEditorView: UIView {
 
     private func updatePlaceholderVisibility() {
         placeholderLabel.isHidden = !(textView.text ?? "").isEmpty
+    }
+
+    // MARK: - Line Numbers
+
+    func setShowLineNumbers(_ show: Bool) {
+        guard show != isLineNumbersVisible else { return }
+        isLineNumbersVisible = show
+        lineNumberView.isHidden = !show
+
+        var insets = textView.textContainerInset
+        insets.left = show ? Self.gutterWidth : 12
+        textView.textContainerInset = insets
+
+        // Also shift the placeholder
+        placeholderLabel.constraints.forEach { c in
+            if c.firstAttribute == .leading {
+                c.constant = show ? Self.gutterWidth + 4 : 12
+            }
+        }
+
+        updateResultsLayout()
     }
 
     // MARK: - Keyboard Toolbar
@@ -317,8 +372,11 @@ class NumiTextEditorView: UIView {
     }
 
     /// Sets text with full attributed string rebuild
-    func setText(_ text: String, results: [LineResult]) {
-        let attributed = buildAttributedString(text: text, results: results)
+    func setText(_ text: String, results: [LineResult],
+                 tokenRanges: [[TokenRange]] = [], syntaxHighlightingEnabled: Bool = true) {
+        let attributed = buildAttributedString(text: text, results: results,
+                                               tokenRanges: tokenRanges,
+                                               syntaxHighlightingEnabled: syntaxHighlightingEnabled)
         let selectedRange = textView.selectedRange
         textView.attributedText = attributed
         // Restore cursor position
@@ -337,7 +395,9 @@ class NumiTextEditorView: UIView {
     }
 
     /// Re-applies highlighting without replacing text (preserves cursor and undo stack)
-    func applyHighlighting(results: [LineResult]) {
+    func applyHighlighting(results: [LineResult],
+                           tokenRanges: [[TokenRange]] = [],
+                           syntaxHighlightingEnabled: Bool = true) {
         let storage = textView.textStorage
         let fullRange = NSRange(location: 0, length: storage.length)
         guard fullRange.length > 0 else { return }
@@ -351,7 +411,6 @@ class NumiTextEditorView: UIView {
             .foregroundColor: defaultTextColor,
         ], range: fullRange)
 
-        // Apply variable highlighting
         let text = textView.text ?? ""
         let lines = text.components(separatedBy: "\n")
         var charOffset = 0
@@ -359,6 +418,19 @@ class NumiTextEditorView: UIView {
         for (lineIndex, line) in lines.enumerated() {
             let lineUtf16Count = line.utf16.count
 
+            // Apply token-based syntax highlighting
+            if syntaxHighlightingEnabled, lineIndex < tokenRanges.count {
+                for tokenRange in tokenRanges[lineIndex] {
+                    guard let color = colorForHighlightKind(tokenRange.kind) else { continue }
+                    let adjustedRange = NSRange(location: charOffset + tokenRange.range.location,
+                                                length: tokenRange.range.length)
+                    if adjustedRange.location + adjustedRange.length <= storage.length {
+                        storage.addAttribute(.foregroundColor, value: color, range: adjustedRange)
+                    }
+                }
+            }
+
+            // Variable assignment highlighting takes precedence
             if lineIndex < results.count,
                let varName = results[lineIndex].assignmentVariable {
                 if let range = line.range(of: varName) {
@@ -381,8 +453,20 @@ class NumiTextEditorView: UIView {
         ]
     }
 
+    /// Returns the color for a given token highlight kind, or nil for default text color
+    private func colorForHighlightKind(_ kind: TokenHighlightKind) -> UIColor? {
+        switch kind {
+        case .keyword: return keywordColor
+        case .function: return functionColor
+        case .variable: return variableColor
+        case .number, .op, .unit, .plain: return nil  // use default text color
+        }
+    }
+
     /// Builds a syntax-highlighted attributed string
-    private func buildAttributedString(text: String, results: [LineResult]) -> NSAttributedString {
+    private func buildAttributedString(text: String, results: [LineResult],
+                                       tokenRanges: [[TokenRange]] = [],
+                                       syntaxHighlightingEnabled: Bool = true) -> NSAttributedString {
         let fullString = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -397,10 +481,21 @@ class NumiTextEditorView: UIView {
         for (lineIndex, line) in lines.enumerated() {
             let lineUtf16Count = line.utf16.count
 
-            // Check if this line has a variable assignment
+            // Apply token-based syntax highlighting
+            if syntaxHighlightingEnabled, lineIndex < tokenRanges.count {
+                for tokenRange in tokenRanges[lineIndex] {
+                    guard let color = colorForHighlightKind(tokenRange.kind) else { continue }
+                    let adjustedRange = NSRange(location: charOffset + tokenRange.range.location,
+                                                length: tokenRange.range.length)
+                    if adjustedRange.location + adjustedRange.length <= fullString.length {
+                        fullString.addAttribute(.foregroundColor, value: color, range: adjustedRange)
+                    }
+                }
+            }
+
+            // Variable assignment highlighting takes precedence
             if lineIndex < results.count,
                let varName = results[lineIndex].assignmentVariable {
-                // Find the variable name in the line
                 if let range = line.range(of: varName) {
                     let nsRange = NSRange(range, in: line)
                     let adjustedRange = NSRange(location: charOffset + nsRange.location, length: nsRange.length)
@@ -423,7 +518,8 @@ class NumiTextEditorView: UIView {
     }
 
     private func updateRightInset() {
-        let maxResultWidth = currentResults.compactMap { $0.value?.formatted }
+        let config = formattingConfig
+        let maxResultWidth = currentResults.compactMap { $0.value?.formatted(with: config) }
             .map { resultWidth($0) }
             .max() ?? 0
         let rightInset = maxResultWidth > 0 ? maxResultWidth + 24 : 12
@@ -443,6 +539,7 @@ class NumiTextEditorView: UIView {
 
     private func updateResultsLayout() {
         var resultEntries: [ResultsOverlayView.Entry] = []
+        var lineInfos: [LineNumberView.LineInfo] = []
 
         let layoutManager = textView.layoutManager
         let textContainer = textView.textContainer
@@ -454,24 +551,7 @@ class NumiTextEditorView: UIView {
             let lineRange = NSRange(location: charIndex, length: line.utf16.count)
             charIndex += line.utf16.count + 1
 
-            guard lineIndex < currentResults.count else { continue }
-            let result = currentResults[lineIndex]
-
-            // Determine display text: value result or error
-            let displayText: String?
-            let isError: Bool
-            if let value = result.value {
-                displayText = value.formatted
-                isError = false
-            } else if let error = result.error {
-                displayText = error
-                isError = true
-            } else {
-                continue // empty line, no display
-            }
-
-            guard let text = displayText else { continue }
-
+            // Compute line rect for both results and line numbers
             let glyphRange = layoutManager.glyphRange(forCharacterRange: lineRange, actualCharacterRange: nil)
             var lineRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
 
@@ -489,6 +569,26 @@ class NumiTextEditorView: UIView {
             lineRect.origin.y += textView.textContainerInset.top
             lineRect.origin.y -= textView.contentOffset.y
 
+            // Line numbers
+            lineInfos.append(LineNumberView.LineInfo(rect: lineRect, number: lineIndex + 1))
+
+            // Results
+            guard lineIndex < currentResults.count else { continue }
+            let result = currentResults[lineIndex]
+
+            let displayText: String?
+            let isError: Bool
+            if let value = result.value {
+                displayText = value.formatted(with: formattingConfig)
+                isError = false
+            } else if let error = result.error {
+                displayText = error
+                isError = true
+            } else {
+                continue
+            }
+
+            guard let text = displayText else { continue }
             resultEntries.append(ResultsOverlayView.Entry(lineRect: lineRect, text: text, isError: isError))
         }
 
@@ -496,6 +596,13 @@ class NumiTextEditorView: UIView {
         resultsOverlay.resultColor = resultColor
         resultsOverlay.resultsFont = resultsFont
         resultsOverlay.setNeedsDisplay()
+
+        // Update line number gutter
+        if isLineNumbersVisible {
+            lineNumberView.lines = lineInfos
+            lineNumberView.font = .monospacedSystemFont(ofSize: editorFont.pointSize - 4, weight: .regular)
+            lineNumberView.setNeedsDisplay()
+        }
     }
 }
 

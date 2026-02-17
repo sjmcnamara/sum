@@ -17,6 +17,8 @@ struct CalculatorView: View {
     private let uiResultGreen = UIColor(red: 0.0, green: 1.0, blue: 0.4, alpha: 1)
     private let uiBgColor = UIColor(red: 0.05, green: 0.05, blue: 0.05, alpha: 1)
     private let uiVarBlue = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)
+    private let uiKeywordColor = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
+    private let uiFunctionColor = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
 
     var body: some View {
         NavigationStack {
@@ -24,9 +26,15 @@ struct CalculatorView: View {
                 NumiTextEditor(
                     text: $viewModel.text,
                     results: viewModel.results,
+                    tokenRanges: viewModel.tokenRanges,
+                    showLineNumbers: viewModel.showLineNumbers,
+                    syntaxHighlightingEnabled: viewModel.syntaxHighlightingEnabled,
+                    formattingConfig: viewModel.formattingConfig,
                     resultColor: uiResultGreen,
                     textColor: uiTextGreen,
                     variableColor: uiVarBlue,
+                    keywordColor: uiKeywordColor,
+                    functionColor: uiFunctionColor,
                     backgroundColor: uiBgColor,
                     font: .monospacedSystemFont(ofSize: 17, weight: .regular)
                 )
@@ -79,7 +87,7 @@ struct CalculatorView: View {
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundColor(dimGreen)
             Spacer()
-            Text(showCopiedTotal ? "Copied" : total.formatted)
+            Text(showCopiedTotal ? "Copied" : total.formatted(with: viewModel.formattingConfig))
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
                 .foregroundColor(showCopiedTotal ? textGreen : resultGreen)
         }
@@ -94,7 +102,7 @@ struct CalculatorView: View {
                 }
         )
         .onTapGesture {
-            UIPasteboard.general.string = total.formatted
+            UIPasteboard.general.string = total.formatted(with: viewModel.formattingConfig)
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
             withAnimation(.easeIn(duration: 0.1)) { showCopiedTotal = true }
