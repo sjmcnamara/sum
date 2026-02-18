@@ -46,6 +46,16 @@ struct NumiTextEditor: UIViewRepresentable {
         view.resultsFont = font
         view.formattingConfig = formattingConfig
         view.setShowLineNumbers(showLineNumbers)
+        view.onPlaceholderExampleTapped = { [weak view] expression in
+            guard let view = view else { return }
+            view.textView.text = expression
+            // Notify delegates so the binding updates
+            NotificationCenter.default.post(
+                name: UITextView.textDidChangeNotification,
+                object: view.textView
+            )
+            context.coordinator.parent.text = expression
+        }
         view.setText(text, results: results, tokenRanges: tokenRanges,
                      syntaxHighlightingEnabled: syntaxHighlightingEnabled)
         return view
@@ -126,8 +136,11 @@ class NumiTextEditorView: UIView {
     private static let gutterWidth: CGFloat = 32
     private var isLineNumbersVisible = false
     private var currentResults: [LineResult] = []
-    private let placeholderLabel = UILabel()
+    private let placeholderStack = UIStackView()
     private var placeholderLeading: NSLayoutConstraint!
+
+    /// Callback fired when user taps a placeholder example expression
+    var onPlaceholderExampleTapped: ((String) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -209,10 +222,13 @@ class NumiTextEditorView: UIView {
             copiedToast.heightAnchor.constraint(equalToConstant: 28),
         ])
 
-        // Placeholder for empty state
-        placeholderLabel.numberOfLines = 0
-        placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
-        placeholderLabel.isUserInteractionEnabled = false
+        // Placeholder for empty state — tappable example expressions
+        placeholderStack.axis = .vertical
+        placeholderStack.alignment = .leading
+        placeholderStack.spacing = 0
+        placeholderStack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(placeholderStack)
+
         let placeholderLines = [
             "128 + 256",
             "width = 1920",
@@ -225,21 +241,31 @@ class NumiTextEditorView: UIView {
             "",
             "sum",
         ]
-        let placeholderText = placeholderLines.joined(separator: "\n")
         let dimColor = NumiTheme.uiDimGreen.withAlphaComponent(0.4)
-        placeholderLabel.attributedText = NSAttributedString(
-            string: placeholderText,
-            attributes: [
-                .font: editorFont,
-                .foregroundColor: dimColor,
-            ]
-        )
-        addSubview(placeholderLabel)
-        placeholderLeading = placeholderLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12)
+        for line in placeholderLines {
+            if line.isEmpty {
+                // Empty line spacer
+                let spacer = UIView()
+                spacer.translatesAutoresizingMaskIntoConstraints = false
+                spacer.heightAnchor.constraint(equalToConstant: editorFont.lineHeight).isActive = true
+                placeholderStack.addArrangedSubview(spacer)
+            } else {
+                let button = UIButton(type: .system)
+                button.setTitle(line, for: .normal)
+                button.titleLabel?.font = editorFont
+                button.setTitleColor(dimColor, for: .normal)
+                button.contentHorizontalAlignment = .leading
+                button.accessibilityIdentifier = line
+                button.addTarget(self, action: #selector(placeholderLineTapped(_:)), for: .touchUpInside)
+                placeholderStack.addArrangedSubview(button)
+            }
+        }
+
+        placeholderLeading = placeholderStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12)
         NSLayoutConstraint.activate([
-            placeholderLabel.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            placeholderStack.topAnchor.constraint(equalTo: topAnchor, constant: 12),
             placeholderLeading,
-            placeholderLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            placeholderStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
         ])
 
         NotificationCenter.default.addObserver(
@@ -255,8 +281,13 @@ class NumiTextEditorView: UIView {
         updateResultsLayout()
     }
 
+    @objc private func placeholderLineTapped(_ sender: UIButton) {
+        guard let expression = sender.accessibilityIdentifier else { return }
+        onPlaceholderExampleTapped?(expression)
+    }
+
     private func updatePlaceholderVisibility() {
-        placeholderLabel.isHidden = !(textView.text ?? "").isEmpty
+        placeholderStack.isHidden = !(textView.text ?? "").isEmpty
     }
 
     // MARK: - Line Numbers
@@ -769,7 +800,7 @@ class NumiTextEditorView: UIView {
             }
 
             guard let text = displayText else { continue }
-            resultEntries.append(ResultsOverlayView.Entry(lineRect: lineRect, text: text, isError: isError))
+            resultEntries.append(ResultsOverlayView.Entry(lineRect: lineRect, text: text, isError: isError, lineIndex: lineIndex))
         }
 
         resultsOverlay.entries = resultEntries
@@ -787,14 +818,18 @@ class NumiTextEditorView: UIView {
 }
 
 /// Draws result labels aligned to the right of each line, with tap-to-copy support
+/// and smooth fade-in / pulse animations driven by CADisplayLink
 class ResultsOverlayView: UIView {
     struct Entry {
         let lineRect: CGRect
         let text: String
         let isError: Bool
+        let lineIndex: Int
     }
 
-    var entries: [Entry] = []
+    var entries: [Entry] = [] {
+        didSet { diffEntries(old: oldValue, new: entries) }
+    }
     var resultColor: UIColor = .green
     var errorColor: UIColor = NumiTheme.uiError
     var resultsFont: UIFont = .monospacedSystemFont(ofSize: 17, weight: .medium)
@@ -806,20 +841,136 @@ class ResultsOverlayView: UIView {
     private var flashIndex: Int?
     private var flashTimer: Timer?
 
+    // MARK: - Animation state
+
+    /// Current alpha per lineIndex (0 → 1 fade-in, 1 → 0 fade-out)
+    private var entryAlphas: [Int: CGFloat] = [:]
+    /// Target alpha per lineIndex
+    private var targetAlphas: [Int: CGFloat] = [:]
+    /// Brightness pulse per lineIndex (decays to 0)
+    private var pulseAlphas: [Int: CGFloat] = [:]
+    /// Previous lineIndex → result text for change detection
+    private var previousEntryMap: [Int: String] = [:]
+    /// Display link driving smooth animation frames
+    private var displayLink: CADisplayLink?
+
+    deinit {
+        displayLink?.invalidate()
+    }
+
+    // MARK: - Diff & animation triggers
+
+    private func diffEntries(old: [Entry], new: [Entry]) {
+        let newMap = Dictionary(new.map { ($0.lineIndex, $0.text) }, uniquingKeysWith: { _, b in b })
+
+        // New or changed entries
+        for entry in new {
+            let li = entry.lineIndex
+            if let prev = previousEntryMap[li] {
+                if prev != entry.text {
+                    // Value changed — pulse
+                    pulseAlphas[li] = 0.4
+                }
+                // Existing entry — keep current alpha, ensure target is 1
+                targetAlphas[li] = 1.0
+            } else {
+                // Brand new entry — fade in from 0
+                entryAlphas[li] = 0.0
+                targetAlphas[li] = 1.0
+            }
+        }
+
+        // Removed entries — fade out
+        for li in previousEntryMap.keys where newMap[li] == nil {
+            targetAlphas[li] = 0.0
+        }
+
+        previousEntryMap = newMap
+        startDisplayLinkIfNeeded()
+    }
+
+    private func startDisplayLinkIfNeeded() {
+        guard displayLink == nil else { return }
+        let link = CADisplayLink(target: self, selector: #selector(animationTick))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    @objc private func animationTick() {
+        var needsRedraw = false
+        let lerpFactor: CGFloat = 0.15
+        let pulseFade: CGFloat = 0.03
+        let epsilon: CGFloat = 0.01
+
+        // Lerp alphas toward targets
+        for (li, target) in targetAlphas {
+            let current = entryAlphas[li] ?? (target > 0.5 ? 0.0 : 1.0)
+            let next = current + (target - current) * lerpFactor
+            if abs(next - target) < epsilon {
+                entryAlphas[li] = target
+                // Clean up fully faded-out entries
+                if target < epsilon {
+                    entryAlphas.removeValue(forKey: li)
+                    targetAlphas.removeValue(forKey: li)
+                    pulseAlphas.removeValue(forKey: li)
+                }
+            } else {
+                entryAlphas[li] = next
+                needsRedraw = true
+            }
+        }
+
+        // Decay pulse alphas
+        for li in pulseAlphas.keys {
+            let p = pulseAlphas[li]! - pulseFade
+            if p <= epsilon {
+                pulseAlphas.removeValue(forKey: li)
+            } else {
+                pulseAlphas[li] = p
+                needsRedraw = true
+            }
+        }
+
+        setNeedsDisplay()
+
+        // Stop display link when converged
+        if !needsRedraw {
+            displayLink?.invalidate()
+            displayLink = nil
+        }
+    }
+
+    // MARK: - Drawing
+
     override func draw(_ rect: CGRect) {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
 
         for (i, entry) in entries.enumerated() {
+            let li = entry.lineIndex
+            let alpha = entryAlphas[li] ?? 1.0
+            let pulse = pulseAlphas[li] ?? 0.0
+
+            // Skip fully transparent entries
+            guard alpha > 0.01 else { continue }
+
             let isFlashing = flashIndex == i
             let baseColor = entry.isError ? errorColor : resultColor
-            let color = isFlashing ? UIColor.white : baseColor
+            let animatedColor: UIColor
+            if isFlashing {
+                animatedColor = UIColor.white.withAlphaComponent(alpha)
+            } else {
+                // Apply alpha + pulse boost (brightens toward white)
+                let effectiveAlpha = min(alpha + pulse, 1.0)
+                animatedColor = Self.blend(baseColor, toward: .white, fraction: pulse)
+                    .withAlphaComponent(effectiveAlpha)
+            }
             let font = entry.isError
                 ? UIFont.monospacedSystemFont(ofSize: resultsFont.pointSize - 2, weight: .regular)
                 : resultsFont
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: color,
+                .foregroundColor: animatedColor,
                 .paragraphStyle: paragraphStyle,
             ]
 
@@ -890,5 +1041,23 @@ class ResultsOverlayView: UIView {
             self?.flashIndex = nil
             self?.setNeedsDisplay()
         }
+    }
+
+    // MARK: - Color blending
+
+    /// Linearly blends `base` toward `target` by `fraction` (0 = all base, 1 = all target)
+    private static func blend(_ base: UIColor, toward target: UIColor, fraction: CGFloat) -> UIColor {
+        guard fraction > 0.001 else { return base }
+        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+        base.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        target.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        let f = min(max(fraction, 0), 1)
+        return UIColor(
+            red: r1 + (r2 - r1) * f,
+            green: g1 + (g2 - g1) * f,
+            blue: b1 + (b2 - b1) * f,
+            alpha: a1 + (a2 - a1) * f
+        )
     }
 }

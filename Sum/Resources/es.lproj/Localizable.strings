@@ -36,5 +36,13 @@
 /* License */
 "license.title" = "Licencia";
 
+/* Onboarding */
+"onboarding.subtitle" = "Una calculadora de lenguaje natural";
+"onboarding.tryIt" = "Toca un ejemplo para probarlo";
+"onboarding.dismiss" = "Entendido";
+"onboarding.basicMath" = "Operaciones b\U00E1sicas";
+"onboarding.unitConversion" = "Conversi\U00F3n de unidades";
+"onboarding.percentages" = "Porcentajes";
+
 /* Formatting */
 "precision.auto" = "Auto";

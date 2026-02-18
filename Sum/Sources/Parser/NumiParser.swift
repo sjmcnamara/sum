@@ -659,8 +659,7 @@ class NumiParser {
 
         // General unit conversion via base unit
         guard let srcCat = sourceUnit.category, let tgtCat = target.category, srcCat == tgtCat else {
-            // Incompatible units
-            return NumiValue(value.number, unit: target)
+            throw NumiError.incompatibleUnits(from: sourceUnit.symbol, to: target.symbol)
         }
 
         // CSS units need special handling for em
@@ -820,8 +819,9 @@ class NumiParser {
 
 enum NumiError: Error {
     case divisionByZero
-    case invalidExpression
-    case incompatibleUnits
+    case invalidExpression(detail: String? = nil)
+    case incompatibleUnits(from: String, to: String)
+    case unknownIdentifier(name: String)
 }
 
 extension NumiParser {
@@ -830,9 +830,16 @@ extension NumiParser {
         let messages = parserKeywords?.errorMessages
         if let numiError = error as? NumiError {
             switch numiError {
-            case .divisionByZero: return messages?["divisionByZero"] ?? "÷ by 0"
-            case .invalidExpression: return messages?["invalidExpression"] ?? "invalid"
-            case .incompatibleUnits: return messages?["incompatibleUnits"] ?? "bad units"
+            case .divisionByZero:
+                return messages?["divisionByZero"] ?? "÷ by 0"
+            case .invalidExpression(let detail):
+                if let detail { return detail }
+                return messages?["invalidExpression"] ?? "invalid"
+            case .incompatibleUnits(let from, let to):
+                return "\(from) \u{2260} \(to)"
+            case .unknownIdentifier(let name):
+                let prefix = messages?["unknownPrefix"] ?? "unknown"
+                return "\(prefix): \(name)"
             }
         }
         return messages?["genericError"] ?? "error"

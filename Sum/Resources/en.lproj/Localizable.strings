@@ -36,5 +36,13 @@
 /* License */
 "license.title" = "License";
 
+/* Onboarding */
+"onboarding.subtitle" = "A natural language calculator";
+"onboarding.tryIt" = "Tap an example to try it";
+"onboarding.dismiss" = "Got it";
+"onboarding.basicMath" = "Basic math";
+"onboarding.unitConversion" = "Unit conversion";
+"onboarding.percentages" = "Percentages";
+
 /* Formatting */
 "precision.auto" = "Auto";

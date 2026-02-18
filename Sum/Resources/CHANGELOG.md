@@ -1,5 +1,25 @@
 # Changelog
 
+## [Sum 1.6.0](https://github.com/sjmcnamara/sum/releases/tag/v1.6.0) (2026-02-18)
+
+- Onboarding & tappable placeholder
+  - First-launch overlay with tappable example cards (math, conversions, percentages)
+  - Tapping an example inserts it into the editor and dismisses the overlay
+  - Placeholder lines are now tappable buttons that insert the expression
+  - Onboarding state persisted via UserDefaults (`hasSeenOnboarding`)
+  - Localized in English, Spanish, and Portuguese
+- Result appearance animations
+  - New results fade in smoothly (~200ms lerp)
+  - Changed values pulse briefly toward white
+  - Removed results fade out
+  - CADisplayLink-driven animation, auto-invalidated when converged
+- Better error messages
+  - `NumiError` now carries context: `.incompatibleUnits(from:to:)`, `.unknownIdentifier(name:)`
+  - Unit conversion errors show `kg ≠ °C` instead of silently returning wrong values
+  - Unknown identifiers show `unknown: xyz` (localized prefix)
+  - Error text slightly brighter for readability
+- 219 tests (unchanged)
+
 ## [Sum 1.5.1](https://github.com/sjmcnamara/sum/releases/tag/v1.5.1) (2026-02-18)
 
 - Portuguese language support

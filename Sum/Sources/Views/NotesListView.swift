@@ -30,14 +30,14 @@ struct NotesListView: View {
                     noteRow(note: note, index: index)
                         .listRowBackground(NumiTheme.background)
                 }
-                .onDelete { indexSet in
+                .onDelete(perform: viewModel.notes.count > 1 ? { indexSet in
                     // Map filtered indices back to model indices
                     let filtered = filteredNotes
                     for offset in indexSet {
                         let modelIndex = filtered[offset].index
                         viewModel.deleteNote(at: modelIndex)
                     }
-                }
+                } : nil)
             }
             .searchable(text: $searchText, prompt: L10n.string("notes.searchPrompt"))
             .scrollContentBackground(.hidden)

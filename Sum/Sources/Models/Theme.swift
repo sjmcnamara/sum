@@ -21,7 +21,7 @@ enum NumiTheme {
     static let uiKeyword = UIColor(red: 0.0, green: 0.7, blue: 0.5, alpha: 1)
     static let uiFunction = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)
     static let uiComment = UIColor(white: 0.35, alpha: 0.8)
-    static let uiError = UIColor(red: 0.7, green: 0.3, blue: 0.3, alpha: 0.6)
+    static let uiError = UIColor(red: 0.8, green: 0.3, blue: 0.3, alpha: 0.75)
     static let uiToolbar = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1)
     static let uiButton = UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1)
     static let uiLineNumber = UIColor(red: 0.0, green: 0.4, blue: 0.2, alpha: 0.5)

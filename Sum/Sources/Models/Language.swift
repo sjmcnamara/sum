@@ -139,6 +139,7 @@ extension Language {
                 "invalidExpression": "invalid",
                 "incompatibleUnits": "bad units",
                 "genericError": "error",
+                "unknownPrefix": "unknown",
             ],
             durationWords: .english,
             displayFormatWords: [
@@ -243,6 +244,7 @@ extension Language {
                 "invalidExpression": "inválido",
                 "incompatibleUnits": "unidades incompatibles",
                 "genericError": "error",
+                "unknownPrefix": "desconocido",
             ],
             durationWords: .spanish,
             displayFormatWords: [
@@ -352,6 +354,7 @@ extension Language {
                 "invalidExpression": "inválido",
                 "incompatibleUnits": "unidades incompatíveis",
                 "genericError": "erro",
+                "unknownPrefix": "desconhecido",
             ],
             durationWords: .portuguese,
             displayFormatWords: [
