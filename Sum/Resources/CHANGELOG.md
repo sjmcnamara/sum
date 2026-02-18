@@ -1,5 +1,19 @@
 # Changelog
 
+## [Sum 1.5.1](https://github.com/sjmcnamara/sum/releases/tag/v1.5.1) (2026-02-18)
+
+- Portuguese language support
+  - Language picker now includes Português alongside English and Español
+  - Parser accepts Portuguese keywords: `mais`, `menos`, `vezes`, `dividido por`
+  - Localized unit names: `quilômetros`, `quilogramas`, `polegadas`, `litros`, etc.
+  - Localized keywords: `gorjeta`, `imposto`, `dividir`, `pessoas`, `hoje`, `agora`
+  - Currency names include `real` / `reais` (BRL)
+  - Duration output: `dias`, `horas`, `minutos`, `segundos`
+  - Localized error messages (`unidades incompatíveis`, `erro`)
+  - Full Portuguese UI strings (`Configurações`, `Formatação`, `Casas Decimais`, etc.)
+  - English keywords always work regardless of language setting
+- 14 new tests (219 total)
+
 ## [Sum 1.5.0](https://github.com/sjmcnamara/sum/releases/tag/v1.5.0) (2026-02-18)
 
 - Internationalization (i18n)

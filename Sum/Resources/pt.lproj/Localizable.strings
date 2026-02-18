@@ -1,0 +1,40 @@
+/* Settings */
+"settings.title" = "Configurações";
+"settings.formatting" = "Formatação";
+"settings.thousandsSeparator" = "Separador de Milhares";
+"settings.decimalPlaces" = "Casas Decimais";
+"settings.defaultCurrency" = "Moeda Padrão";
+"settings.language" = "Idioma";
+"settings.editor" = "Editor";
+"settings.lineNumbers" = "Números de Linha";
+"settings.syntaxColors" = "Cores de Sintaxe";
+"settings.info" = "Informações";
+"settings.about" = "Sobre";
+"settings.license" = "Licença";
+"settings.done" = "Pronto";
+
+/* Calculator */
+"calculator.newNote" = "Nova Nota";
+"calculator.allNotes" = "Todas as Notas";
+"calculator.settings" = "Configurações";
+"calculator.total" = "Total";
+"calculator.copied" = "Copiado";
+"calculator.defaultTitle" = "Calculadora";
+
+/* Notes */
+"notes.title" = "Notas";
+"notes.searchPrompt" = "Buscar notas";
+"notes.done" = "Pronto";
+"notes.noteName" = "Nome da nota";
+"notes.rename" = "Renomear";
+"notes.delete" = "Excluir";
+
+/* About */
+"about.title" = "Sobre";
+"about.subtitle" = "Uma calculadora de linguagem natural";
+
+/* License */
+"license.title" = "Licença";
+
+/* Formatting */
+"precision.auto" = "Auto";
