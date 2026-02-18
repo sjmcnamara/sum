@@ -63,11 +63,18 @@
 - Onboarding localized in all 3 languages
 - 219 tests (unchanged)
 
+### v1.7.0 — Theme Options
+- 4 color themes: Classic Green (default), Amber, Ocean, Light
+- Theme picker in Settings with instant live preview
+- Light mode for daytime use; dark terminal themes (Amber, Ocean) for variety
+- All UIKit elements update dynamically (toolbar, placeholder, toast)
+- 6 new tests (225 total)
+
 ---
 
 ## Upcoming
 
-### v1.7 — Sharing & Export
+### v1.8 — Sharing & Export
 - Share sheet — export a note as plain text or formatted image
 - Copy all results — one-tap copy of the full note with results
 - Import/export notes — share `.sum` files between devices

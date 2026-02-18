@@ -1,5 +1,17 @@
 # Changelog
 
+## [Sum 1.7.0](https://github.com/sjmcnamara/sum/releases/tag/v1.7.0) (2026-02-18)
+
+- Theme options
+  - 4 color themes: Classic Green (default), Amber, Ocean, Light
+  - Theme picker in Settings with instant live preview
+  - Light mode: light background, dark text, green results, light keyboard
+  - Dark terminal themes: Amber (warm orange) and Ocean (cool blue)
+  - All UIKit elements (toolbar, placeholder, toast) update dynamically
+  - Theme persisted via UserDefaults
+  - Localized settings label (Theme / Tema)
+- 6 new tests (225 total)
+
 ## [Sum 1.6.0](https://github.com/sjmcnamara/sum/releases/tag/v1.6.0) (2026-02-18)
 
 - Onboarding & tappable placeholder

@@ -13,6 +13,31 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // MARK: - Theme
+                Section {
+                    HStack {
+                        Label(L10n.string("settings.theme"), systemImage: "paintpalette")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(NumiTheme.textGreen)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                        Spacer()
+                        Picker("", selection: $settings.theme) {
+                            ForEach(AppTheme.allCases) { theme in
+                                Text(theme.displayName).tag(theme)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(NumiTheme.dimGreen)
+                        .fixedSize()
+                    }
+                    .listRowBackground(NumiTheme.background)
+                } header: {
+                    Text(L10n.string("settings.theme"))
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(NumiTheme.dimGreen)
+                }
+
                 // MARK: - Language
                 Section {
                     HStack {
@@ -152,7 +177,7 @@ struct SettingsView: View {
             }
         }
         .background(NumiTheme.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(settings.theme.isDark ? .dark : .light)
     }
 }
 

@@ -71,6 +71,7 @@ struct NumiTextEditor: UIViewRepresentable {
         uiView.resultColor = resultColor
         uiView.formattingConfig = formattingConfig
         uiView.setShowLineNumbers(showLineNumbers)
+        uiView.refreshThemeColors()
 
         // Keep suggestion engine's variable list and language up to date
         uiView.setLanguage(AppSettings.shared.language)
@@ -132,6 +133,13 @@ class NumiTextEditorView: UIView {
     private var operatorScrollView: UIScrollView!
     private var suggestionScrollView: UIScrollView!
     private var suggestionStack: UIStackView!
+
+    // Theme-refresh refs for keyboard toolbar elements
+    private var toolbarView: UIView?
+    private var toolbarBorder: UIView?
+    private var operatorStack: UIStackView?
+    private var opDismissButton: UIButton?
+    private var sugDismissButton: UIButton?
 
     private static let gutterWidth: CGFloat = 32
     private var isLineNumbersVisible = false
@@ -313,10 +321,12 @@ class NumiTextEditorView: UIView {
         let toolbarHeight: CGFloat = 40
         let toolbar = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: toolbarHeight))
         toolbar.backgroundColor = NumiTheme.uiToolbar
+        toolbarView = toolbar
 
         // Top border
         let border = UIView()
         border.backgroundColor = NumiTheme.uiDimGreen.withAlphaComponent(0.3)
+        toolbarBorder = border
         border.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(border)
         NSLayoutConstraint.activate([
@@ -346,6 +356,7 @@ class NumiTextEditorView: UIView {
         ]
 
         let opStack = UIStackView()
+        operatorStack = opStack
         opStack.axis = .horizontal
         opStack.spacing = 2
         opStack.translatesAutoresizingMaskIntoConstraints = false
@@ -375,6 +386,7 @@ class NumiTextEditorView: UIView {
         dismissButton.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
         dismissButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
         opStack.addArrangedSubview(dismissButton)
+        opDismissButton = dismissButton
 
         // --- Suggestion scroll view (hidden by default) ---
         let sugScroll = UIScrollView()
@@ -470,12 +482,13 @@ class NumiTextEditorView: UIView {
         }
 
         // Dismiss button at end of suggestion bar too
-        let dismissButton = UIButton(type: .system)
-        dismissButton.setImage(UIImage(systemName: "keyboard.chevron.compact.down"), for: .normal)
-        dismissButton.tintColor = NumiTheme.uiDimGreen
-        dismissButton.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
-        dismissButton.widthAnchor.constraint(equalToConstant: 40).isActive = true
-        suggestionStack.addArrangedSubview(dismissButton)
+        let dismissBtn = UIButton(type: .system)
+        dismissBtn.setImage(UIImage(systemName: "keyboard.chevron.compact.down"), for: .normal)
+        dismissBtn.tintColor = NumiTheme.uiDimGreen
+        dismissBtn.addTarget(self, action: #selector(dismissKeyboard), for: .touchUpInside)
+        dismissBtn.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        suggestionStack.addArrangedSubview(dismissBtn)
+        sugDismissButton = dismissBtn
 
         suggestionScrollView.contentOffset = .zero
     }
@@ -559,6 +572,51 @@ class NumiTextEditorView: UIView {
         guard language != currentLanguage else { return }
         currentLanguage = language
         suggestionEngine.setLanguage(language)
+    }
+
+    // MARK: - Theme refresh
+
+    /// Re-applies theme colors to toolbar, placeholder, toast, and keyboard elements
+    func refreshThemeColors() {
+        // Toolbar
+        toolbarView?.backgroundColor = NumiTheme.uiToolbar
+        toolbarBorder?.backgroundColor = NumiTheme.uiDimGreen.withAlphaComponent(0.3)
+
+        // Operator buttons
+        let buttonColor = NumiTheme.uiTextGreen
+        let buttonBg = NumiTheme.uiButton
+        if let stack = operatorStack {
+            for case let button as UIButton in stack.arrangedSubviews {
+                if button == opDismissButton { continue }
+                button.setTitleColor(buttonColor, for: .normal)
+                button.backgroundColor = buttonBg
+                if #available(iOS 15.0, *), var config = button.configuration {
+                    config.baseForegroundColor = buttonColor
+                    config.background.backgroundColor = buttonBg
+                    button.configuration = config
+                }
+            }
+        }
+
+        // Dismiss buttons
+        let dimColor = NumiTheme.uiDimGreen
+        opDismissButton?.tintColor = dimColor
+        sugDismissButton?.tintColor = dimColor
+
+        // Placeholder buttons
+        let placeholderColor = dimColor.withAlphaComponent(0.4)
+        for case let button as UIButton in placeholderStack.arrangedSubviews {
+            button.setTitleColor(placeholderColor, for: .normal)
+        }
+
+        // Copied toast
+        copiedToast.textColor = NumiTheme.uiBackground
+        copiedToast.backgroundColor = NumiTheme.uiTextGreen
+
+        // Keyboard appearance
+        let isDark = AppSettings.shared.theme.isDark
+        textView.keyboardAppearance = isDark ? .dark : .light
+        textView.reloadInputViews()
     }
 
     // MARK: - Copy to Clipboard
@@ -805,12 +863,14 @@ class NumiTextEditorView: UIView {
 
         resultsOverlay.entries = resultEntries
         resultsOverlay.resultColor = resultColor
+        resultsOverlay.errorColor = NumiTheme.uiError
         resultsOverlay.resultsFont = resultsFont
         resultsOverlay.setNeedsDisplay()
 
         // Update line number gutter
         if isLineNumbersVisible {
             lineNumberView.lines = lineInfos
+            lineNumberView.textColor = NumiTheme.uiLineNumber
             lineNumberView.font = .monospacedSystemFont(ofSize: editorFont.pointSize - 4, weight: .regular)
             lineNumberView.setNeedsDisplay()
         }

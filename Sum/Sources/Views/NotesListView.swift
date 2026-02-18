@@ -62,7 +62,7 @@ struct NotesListView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(AppSettings.shared.theme.isDark ? .dark : .light)
     }
 
     private func noteRow(note: Note, index: Int) -> some View {

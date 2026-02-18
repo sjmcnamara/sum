@@ -46,4 +46,60 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(DecimalPrecision.four.label, "4")
         XCTAssertEqual(DecimalPrecision.six.label, "6")
     }
+
+    // MARK: - Theme
+
+    func testAppThemeDisplayNames() {
+        XCTAssertEqual(AppTheme.classicGreen.displayName, "Classic Green")
+        XCTAssertEqual(AppTheme.amber.displayName, "Amber")
+        XCTAssertEqual(AppTheme.ocean.displayName, "Ocean")
+        XCTAssertEqual(AppTheme.light.displayName, "Light")
+    }
+
+    func testAppThemeRawValues() {
+        XCTAssertEqual(AppTheme.classicGreen.rawValue, "classicGreen")
+        XCTAssertEqual(AppTheme.amber.rawValue, "amber")
+        XCTAssertEqual(AppTheme.ocean.rawValue, "ocean")
+        XCTAssertEqual(AppTheme.light.rawValue, "light")
+    }
+
+    func testAppThemeIsDark() {
+        XCTAssertTrue(AppTheme.classicGreen.isDark)
+        XCTAssertTrue(AppTheme.amber.isDark)
+        XCTAssertTrue(AppTheme.ocean.isDark)
+        XCTAssertFalse(AppTheme.light.isDark)
+    }
+
+    func testAppThemeCaseCount() {
+        XCTAssertEqual(AppTheme.allCases.count, 4)
+    }
+
+    func testThemePersistence() {
+        let settings = AppSettings.shared
+        let original = settings.theme
+
+        settings.theme = .amber
+        XCTAssertEqual(settings.theme, .amber)
+        settings.theme = .ocean
+        XCTAssertEqual(settings.theme, .ocean)
+        settings.theme = .light
+        XCTAssertEqual(settings.theme, .light)
+
+        settings.theme = original
+    }
+
+    func testNumiThemeColorsChangeWithTheme() {
+        let settings = AppSettings.shared
+        let original = settings.theme
+
+        settings.theme = .classicGreen
+        let greenBg = NumiTheme.uiBackground
+
+        settings.theme = .light
+        let lightBg = NumiTheme.uiBackground
+
+        XCTAssertNotEqual(greenBg, lightBg)
+
+        settings.theme = original
+    }
 }

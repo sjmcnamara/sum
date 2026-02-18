@@ -1,5 +1,6 @@
 /* Settings */
 "settings.title" = "Settings";
+"settings.theme" = "Theme";
 "settings.formatting" = "Formatting";
 "settings.thousandsSeparator" = "Thousands Separator";
 "settings.decimalPlaces" = "Decimal Places";

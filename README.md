@@ -24,6 +24,7 @@ Sum turns plain English — or Spanish, or Portuguese — into live calculations
 - **Onboarding** — first-launch overlay with tappable example cards, tappable placeholder lines
 - **Animated results** — results fade in smoothly and pulse on value changes
 - **Contextual errors** — incompatible units show `kg ≠ °C`, unknown identifiers are named
+- **Theme options** — Classic Green, Amber, Ocean, and Light mode
 
 For the full feature reference with examples, see the **[Documentation Wiki](https://github.com/sjmcnamara/sum/wiki)**.
 
@@ -104,7 +105,7 @@ Sum/
     en.lproj/Localizable.strings      # English UI strings
     es.lproj/Localizable.strings      # Spanish UI strings
     pt.lproj/Localizable.strings      # Portuguese UI strings
-SumTests/                             # 219 tests
+SumTests/                             # 225 tests
 ```
 
 ## Architecture

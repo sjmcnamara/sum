@@ -88,7 +88,7 @@ struct CalculatorView: View {
                 SettingsView()
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(settings.theme.isDark ? .dark : .light)
     }
 
     // MARK: - Grand Total

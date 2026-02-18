@@ -14,6 +14,11 @@ class AppSettings: ObservableObject {
     private let defaultCurrencyKey = "org.sum.defaultCurrency"
     private let languageKey = "org.sum.language"
     private let hasSeenOnboardingKey = "org.sum.hasSeenOnboarding"
+    private let themeKey = "org.sum.theme"
+
+    @Published var theme: AppTheme {
+        didSet { defaults.set(theme.rawValue, forKey: themeKey) }
+    }
 
     @Published var hasSeenOnboarding: Bool {
         didSet { defaults.set(hasSeenOnboarding, forKey: hasSeenOnboardingKey) }
@@ -44,6 +49,7 @@ class AppSettings: ObservableObject {
     }
 
     init() {
+        self.theme = AppTheme(rawValue: defaults.string(forKey: themeKey) ?? "classicGreen") ?? .classicGreen
         self.hasSeenOnboarding = defaults.object(forKey: hasSeenOnboardingKey) as? Bool ?? false
         self.useThousandsSeparator = defaults.object(forKey: thousandsSeparatorKey) as? Bool ?? true
         let rawPrecision = defaults.object(forKey: decimalPrecisionKey) as? Int ?? -1

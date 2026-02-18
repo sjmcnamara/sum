@@ -86,7 +86,7 @@ struct OnboardingOverlayView: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(red: 0.08, green: 0.08, blue: 0.08))
+                    .fill(NumiTheme.barBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
