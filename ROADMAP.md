@@ -41,11 +41,19 @@
 - About view: 3D app icon, retro scrolling credits from CHANGELOG
 - New 3D metallic sigma app icon
 
+### v1.5.0 — Internationalization (i18n)
+- Language picker in Settings (English / Español)
+- All UI labels localized via .strings resource files
+- Parser accepts localized keywords (más, menos, por, dividido entre)
+- Localized unit names, duration output, error messages, autocomplete suggestions
+- English keywords always work regardless of language setting
+- 19 new tests (205 total)
+
 ---
 
 ## Upcoming
 
-### v1.5 — Sharing & Export
+### v1.6 — Sharing & Export
 - Share sheet — export a note as plain text or formatted image
 - Copy all results — one-tap copy of the full note with results
 - Import/export notes — share `.sum` files between devices

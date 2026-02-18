@@ -25,7 +25,7 @@ struct SuggestionEngine {
     private var variableCompletions: [Suggestion] = []
 
     init() {
-        buildCompletions()
+        setLanguage(AppSettings.shared.language)
     }
 
     /// Returns suggestions matching the given prefix, sorted by priority then length
@@ -58,22 +58,29 @@ struct SuggestionEngine {
         variableCompletions = names.map { Suggestion(text: $0, category: .variable) }
     }
 
+    /// Rebuilds completions with localized keywords and unit names for the given language
+    mutating func setLanguage(_ language: Language) {
+        completions = []
+        buildCompletions()
+
+        // Add localized suggestion keywords
+        let keywords = Language.parserKeywords(for: language)
+        for kw in keywords.suggestionKeywords {
+            completions.append(Suggestion(text: kw, category: .keyword))
+        }
+
+        // Add localized unit names (3+ chars only)
+        for (name, _) in keywords.unitNames where name.count >= 3 {
+            completions.append(Suggestion(text: name, category: .unit))
+        }
+    }
+
     // MARK: - Build Completions
 
     private mutating func buildCompletions() {
         // Functions
         for name in Tokenizer.functionNames {
             completions.append(Suggestion(text: name, category: .function))
-        }
-
-        // Useful keywords
-        let keywords = ["pi", "e", "tau", "phi", "sum", "total", "average", "avg",
-                         "today", "now", "prev", "split", "between", "among",
-                         "ways", "people", "tip", "tax",
-                         "speedoflight", "lightspeed", "gravity", "avogadro",
-                         "planck", "boltzmann", "echarge"]
-        for kw in keywords {
-            completions.append(Suggestion(text: kw, category: .keyword))
         }
 
         // Units from unitMap (use the first/canonical name for each unit)

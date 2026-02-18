@@ -1,5 +1,24 @@
 # Changelog
 
+## [Sum 1.5.0](https://github.com/sjmcnamara/sum/releases/tag/v1.5.0) (2026-02-18)
+
+- Internationalization (i18n)
+  - Language picker in Settings (English / Español)
+  - All UI labels, buttons, and section headers localized via .strings resource files
+  - Parser accepts localized keywords: `más`, `menos`, `por`, `dividido entre`
+  - Localized unit names: `kilómetros`, `libras`, `pulgadas`, `litros`, etc.
+  - Localized keywords: `propina`, `impuesto`, `dividir`, `personas`, `hoy`, `ahora`
+  - Duration output in selected language (`días`, `horas`, `minutos`, `segundos`)
+  - Localized error messages (`÷ por 0`, `inválido`, `unidades incompatibles`)
+  - English keywords always work regardless of language setting
+  - Autocomplete suggestions include localized keywords and unit names
+- Infrastructure
+  - `Language` enum with `ParserKeywords` merged lookup tables
+  - `L10n` helper reads from user-chosen language bundle (independent from iOS locale)
+  - `DurationWords` added to `FormattingConfig` for localized time formatting
+  - `en.lproj` and `es.lproj` Localizable.strings (29 entries each)
+- 19 new tests (205 total)
+
 ## [Sum 1.4.2](https://github.com/sjmcnamara/sum/releases/tag/v1.4.2) (2026-02-17)
 
 - UI tweaks & polish

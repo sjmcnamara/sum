@@ -12,6 +12,7 @@ class AppSettings: ObservableObject {
     private let showLineNumbersKey = "org.sum.showLineNumbers"
     private let syntaxHighlightingKey = "org.sum.syntaxHighlighting"
     private let defaultCurrencyKey = "org.sum.defaultCurrency"
+    private let languageKey = "org.sum.language"
 
     @Published var useThousandsSeparator: Bool {
         didSet { defaults.set(useThousandsSeparator, forKey: thousandsSeparatorKey) }
@@ -33,6 +34,10 @@ class AppSettings: ObservableObject {
         didSet { defaults.set(defaultCurrency, forKey: defaultCurrencyKey) }
     }
 
+    @Published var language: Language {
+        didSet { defaults.set(language.rawValue, forKey: languageKey) }
+    }
+
     init() {
         self.useThousandsSeparator = defaults.object(forKey: thousandsSeparatorKey) as? Bool ?? true
         let rawPrecision = defaults.object(forKey: decimalPrecisionKey) as? Int ?? -1
@@ -40,13 +45,16 @@ class AppSettings: ObservableObject {
         self.showLineNumbers = defaults.object(forKey: showLineNumbersKey) as? Bool ?? false
         self.syntaxHighlightingEnabled = defaults.object(forKey: syntaxHighlightingKey) as? Bool ?? true
         self.defaultCurrency = defaults.string(forKey: defaultCurrencyKey) ?? "USD"
+        self.language = Language(rawValue: defaults.string(forKey: languageKey) ?? "en") ?? .english
     }
 
     /// Builds an immutable config snapshot for formatting
     var formattingConfig: FormattingConfig {
-        FormattingConfig(
+        let keywords = Language.parserKeywords(for: language)
+        return FormattingConfig(
             useThousandsSeparator: useThousandsSeparator,
-            decimalPrecision: decimalPrecision
+            decimalPrecision: decimalPrecision,
+            durationWords: keywords.durationWords
         )
     }
 }

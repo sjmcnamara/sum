@@ -21,6 +21,10 @@ struct TokenRange: Equatable {
 /// Tokenizes a line of text into tokens for the parser
 struct Tokenizer {
 
+    /// Language-aware keyword tables. When set, these are checked before the
+    /// hardcoded English switches. When nil, falls back to hardcoded behavior.
+    var parserKeywords: ParserKeywords?
+
     // MARK: - Unit Lookup
 
     static let unitMap: [(String, NumiUnit)] = [
@@ -582,6 +586,53 @@ struct Tokenizer {
         }
 
         let lower = word.lowercased()
+
+        // Language-aware keyword lookup (checked before hardcoded switches)
+        if let pk = parserKeywords {
+            // Keywords
+            if let kw = pk.keywords[lower] {
+                return (.keyword(kw), i)
+            }
+            // Operator words
+            if let op = pk.operatorWords[lower] {
+                return (.op(op), i)
+            }
+            // "divided by" / "dividido entre" two-word operators
+            for db in pk.dividedBy {
+                if lower == db.word {
+                    var j = i
+                    while j < input.endIndex && input[j].isWhitespace { j = input.index(after: j) }
+                    let byWord = db.by
+                    var matched = true
+                    var k = byWord.startIndex
+                    let jStart = j
+                    while k < byWord.endIndex && j < input.endIndex {
+                        if input[j].lowercased() != String(byWord[k]).lowercased() {
+                            matched = false
+                            break
+                        }
+                        j = input.index(after: j)
+                        k = byWord.index(after: k)
+                    }
+                    if matched && k == byWord.endIndex {
+                        // Ensure we matched the full word (not prefix of another word)
+                        if j >= input.endIndex || !input[j].isLetter {
+                            return (.op(.divide), j)
+                        }
+                    }
+                    // Reset j if no match
+                    _ = jStart
+                }
+            }
+            // Localized unit names
+            if let unit = pk.unitNames[lower] {
+                return (.unit(unit), i)
+            }
+            // Localized currency names
+            if let code = pk.currencyNames[lower] {
+                return (.unit(.currency(code)), i)
+            }
+        }
 
         // Keywords
         switch lower {

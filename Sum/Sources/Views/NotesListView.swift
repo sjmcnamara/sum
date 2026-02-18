@@ -39,16 +39,16 @@ struct NotesListView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search notes")
+            .searchable(text: $searchText, prompt: L10n.string("notes.searchPrompt"))
             .scrollContentBackground(.hidden)
             .background(NumiTheme.background)
-            .navigationTitle("Notes")
+            .navigationTitle(L10n.string("notes.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(NumiTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.string("notes.done")) { dismiss() }
                         .foregroundColor(NumiTheme.textGreen)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -72,7 +72,7 @@ struct NotesListView: View {
         } label: {
             HStack {
                 if editingNoteId == note.id {
-                    TextField("Note name", text: $editingName, onCommit: {
+                    TextField(L10n.string("notes.noteName"), text: $editingName, onCommit: {
                         viewModel.renameNote(at: index, to: editingName)
                         editingNoteId = nil
                     })
@@ -109,14 +109,14 @@ struct NotesListView: View {
                 editingName = note.title
                 editingNoteId = note.id
             } label: {
-                Label("Rename", systemImage: "pencil")
+                Label(L10n.string("notes.rename"), systemImage: "pencil")
             }
 
             if viewModel.notes.count > 1 {
                 Button(role: .destructive) {
                     viewModel.deleteNote(at: index)
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(L10n.string("notes.delete"), systemImage: "trash")
                 }
             }
         }

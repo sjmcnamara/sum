@@ -42,14 +42,14 @@ struct CalculatorView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: { viewModel.addNote() }) {
-                            Label("New Note", systemImage: "plus")
+                            Label(L10n.string("calculator.newNote"), systemImage: "plus")
                         }
                         Button(action: { showNotesList = true }) {
-                            Label("All Notes", systemImage: "list.bullet")
+                            Label(L10n.string("calculator.allNotes"), systemImage: "list.bullet")
                         }
                         Divider()
                         Button(action: { showSettings = true }) {
-                            Label("Settings", systemImage: "gearshape")
+                            Label(L10n.string("calculator.settings"), systemImage: "gearshape")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -71,11 +71,11 @@ struct CalculatorView: View {
 
     private func grandTotalBar(_ total: NumiValue) -> some View {
         HStack {
-            Text("Total")
+            Text(L10n.string("calculator.total"))
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundColor(NumiTheme.dimGreen)
             Spacer()
-            Text(showCopiedTotal ? "Copied" : total.formatted(with: viewModel.formattingConfig))
+            Text(showCopiedTotal ? L10n.string("calculator.copied") : total.formatted(with: viewModel.formattingConfig))
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
                 .foregroundColor(showCopiedTotal ? NumiTheme.textGreen : NumiTheme.resultGreen)
         }
@@ -105,7 +105,7 @@ struct CalculatorView: View {
     private var noteTitle: some View {
         Button(action: { showNotesList = true }) {
             HStack(spacing: 4) {
-                Text(viewModel.currentNote?.title ?? "Calculator")
+                Text(viewModel.currentNote?.title ?? L10n.string("calculator.defaultTitle"))
                     .font(.system(size: 16, weight: .semibold, design: .monospaced))
                     .foregroundColor(NumiTheme.textGreen)
                 Image(systemName: "chevron.down")

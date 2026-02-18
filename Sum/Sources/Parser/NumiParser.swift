@@ -3,7 +3,7 @@ import os
 
 /// The main expression parser and evaluator
 class NumiParser {
-    private let tokenizer = Tokenizer()
+    private var tokenizer = Tokenizer()
     private var variables: [String: NumiValue] = [:]
     private var previousResults: [NumiValue?] = []
     private var emSize: Double = 16 // default em in pixels
@@ -14,6 +14,11 @@ class NumiParser {
 
     func setCurrencyRates(_ rates: [String: Double]) {
         currencyRates = rates
+    }
+
+    /// Language-aware keyword tables — propagated to the tokenizer automatically
+    var parserKeywords: ParserKeywords? {
+        didSet { tokenizer.parserKeywords = parserKeywords }
     }
 
     // MARK: - Public API
@@ -121,28 +126,15 @@ class NumiParser {
             if case .keyword(let kw) = effectiveTokens[pos], [.in, .into, .as, .to].contains(kw) {
                 pos += 1
                 if pos < effectiveTokens.count {
-                    // Check for "sci" (scientific notation)
-                    if case .variable(let name) = effectiveTokens[pos], name.lowercased() == "sci" {
-                        if let r = result {
-                            return NumiValue(r.number, unit: .scientific)
-                        }
-                    }
-                    // Check for "hex"
-                    if case .variable(let name) = effectiveTokens[pos], name.lowercased() == "hex" {
-                        if let r = result {
-                            return NumiValue(r.number, unit: .hex)
-                        }
-                    }
-                    // Check for "binary" / "bin"
-                    if case .variable(let name) = effectiveTokens[pos], ["binary", "bin"].contains(name.lowercased()) {
-                        if let r = result {
-                            return NumiValue(r.number, unit: .binary)
-                        }
-                    }
-                    // Check for "octal" / "oct"
-                    if case .variable(let name) = effectiveTokens[pos], ["octal", "oct"].contains(name.lowercased()) {
-                        if let r = result {
-                            return NumiValue(r.number, unit: .octal)
+                    // Display format keywords (sci, hex, binary, etc.) — also localized
+                    if case .variable(let name) = effectiveTokens[pos] {
+                        let formatWords = parserKeywords?.displayFormatWords ?? [
+                            "sci": .scientific, "hex": .hex,
+                            "binary": .binary, "bin": .binary,
+                            "octal": .octal, "oct": .octal,
+                        ]
+                        if let displayUnit = formatWords[name.lowercased()], let r = result {
+                            return NumiValue(r.number, unit: displayUnit)
                         }
                     }
 
@@ -504,12 +496,14 @@ class NumiParser {
 
     /// Strips leading noise words: "what", "is", single-letter variable "s" (from "what's")
     private func stripLeadingNoise(_ tokens: [Token]) -> [Token] {
+        let noiseWords = parserKeywords?.leadingNoiseWords ?? ["what", "is"]
+        let noiseVars = parserKeywords?.leadingNoiseVariables ?? ["s", "whats"]
         var i = 0
         while i < tokens.count {
             switch tokens[i] {
-            case .keyword(.what), .keyword(.is):
+            case .keyword(let kw) where noiseWords.contains(kw.rawValue):
                 i += 1
-            case .variable(let v) where v.lowercased() == "s" || v.lowercased() == "whats":
+            case .variable(let v) where noiseVars.contains(v.lowercased()):
                 i += 1
             default:
                 return Array(tokens[i...])
@@ -549,11 +543,12 @@ class NumiParser {
         return tokens
     }
 
-    /// Strips trailing noise: "ways", "people"
+    /// Strips trailing noise: "ways", "people" (and localized equivalents)
     private func stripTrailingNoise(_ tokens: [Token]) -> [Token] {
+        let noiseKeywords = parserKeywords?.trailingNoiseKeywords ?? [.ways, .people]
         var result = tokens
         while let last = result.last {
-            if case .keyword(let kw) = last, kw == .ways || kw == .people {
+            if case .keyword(let kw) = last, noiseKeywords.contains(kw) {
                 result.removeLast()
             } else {
                 break
@@ -832,14 +827,15 @@ enum NumiError: Error {
 extension NumiParser {
     /// Converts a caught error into a short user-facing message
     func describeError(_ error: Error) -> String {
+        let messages = parserKeywords?.errorMessages
         if let numiError = error as? NumiError {
             switch numiError {
-            case .divisionByZero: return "÷ by 0"
-            case .invalidExpression: return "invalid"
-            case .incompatibleUnits: return "bad units"
+            case .divisionByZero: return messages?["divisionByZero"] ?? "÷ by 0"
+            case .invalidExpression: return messages?["invalidExpression"] ?? "invalid"
+            case .incompatibleUnits: return messages?["incompatibleUnits"] ?? "bad units"
             }
         }
-        return "error"
+        return messages?["genericError"] ?? "error"
     }
 }
 

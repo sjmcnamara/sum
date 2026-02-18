@@ -13,10 +13,35 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // MARK: - Language
+                Section {
+                    HStack {
+                        Label(L10n.string("settings.language"), systemImage: "globe")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(NumiTheme.textGreen)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                        Spacer()
+                        Picker("", selection: $settings.language) {
+                            ForEach(Language.allCases) { lang in
+                                Text(lang.displayName).tag(lang)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(NumiTheme.dimGreen)
+                        .fixedSize()
+                    }
+                    .listRowBackground(NumiTheme.background)
+                } header: {
+                    Text(L10n.string("settings.language"))
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(NumiTheme.dimGreen)
+                }
+
                 // MARK: - Formatting
                 Section {
                     Toggle(isOn: $settings.useThousandsSeparator) {
-                        Label("Thousands Separator", systemImage: "number")
+                        Label(L10n.string("settings.thousandsSeparator"), systemImage: "number")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
@@ -24,7 +49,7 @@ struct SettingsView: View {
                     .listRowBackground(NumiTheme.background)
 
                     HStack {
-                        Label("Decimal Places", systemImage: "textformat.123")
+                        Label(L10n.string("settings.decimalPlaces"), systemImage: "textformat.123")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                             .lineLimit(1)
@@ -43,7 +68,7 @@ struct SettingsView: View {
                     .listRowBackground(NumiTheme.background)
 
                     HStack {
-                        Label("Default Currency", systemImage: "dollarsign.circle")
+                        Label(L10n.string("settings.defaultCurrency"), systemImage: "dollarsign.circle")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                             .lineLimit(1)
@@ -60,7 +85,7 @@ struct SettingsView: View {
                     }
                     .listRowBackground(NumiTheme.background)
                 } header: {
-                    Text("Formatting")
+                    Text(L10n.string("settings.formatting"))
                         .font(.system(.body, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen)
                 }
@@ -68,7 +93,7 @@ struct SettingsView: View {
                 // MARK: - Editor
                 Section {
                     Toggle(isOn: $settings.showLineNumbers) {
-                        Label("Line Numbers", systemImage: "list.number")
+                        Label(L10n.string("settings.lineNumbers"), systemImage: "list.number")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
@@ -76,14 +101,14 @@ struct SettingsView: View {
                     .listRowBackground(NumiTheme.background)
 
                     Toggle(isOn: $settings.syntaxHighlightingEnabled) {
-                        Label("Syntax Colors", systemImage: "paintbrush")
+                        Label(L10n.string("settings.syntaxColors"), systemImage: "paintbrush")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .tint(NumiTheme.textGreen)
                     .listRowBackground(NumiTheme.background)
                 } header: {
-                    Text("Editor")
+                    Text(L10n.string("settings.editor"))
                         .font(.system(.body, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen)
                 }
@@ -93,7 +118,7 @@ struct SettingsView: View {
                     NavigationLink {
                         AboutView()
                     } label: {
-                        Label("About", systemImage: "info.circle")
+                        Label(L10n.string("settings.about"), systemImage: "info.circle")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
@@ -102,26 +127,26 @@ struct SettingsView: View {
                     NavigationLink {
                         LicenseView()
                     } label: {
-                        Label("License", systemImage: "doc.text")
+                        Label(L10n.string("settings.license"), systemImage: "doc.text")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(NumiTheme.textGreen)
                     }
                     .listRowBackground(NumiTheme.background)
                 } header: {
-                    Text("Info")
+                    Text(L10n.string("settings.info"))
                         .font(.system(.body, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen)
                 }
             }
             .scrollContentBackground(.hidden)
             .background(NumiTheme.background)
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.string("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(NumiTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.string("settings.done")) { dismiss() }
                         .foregroundColor(NumiTheme.textGreen)
                 }
             }

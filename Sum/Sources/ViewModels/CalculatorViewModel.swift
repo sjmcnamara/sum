@@ -18,7 +18,7 @@ class CalculatorViewModel: ObservableObject {
     @Published var syntaxHighlightingEnabled: Bool = true
 
     private let parser = NumiParser()
-    private let tokenizer = Tokenizer()
+    private var tokenizer = Tokenizer()
     private let storage = NoteStorage.shared
     private let settings = AppSettings.shared
     private var isLoaded = false
@@ -66,6 +66,11 @@ class CalculatorViewModel: ObservableObject {
         formattingConfig = settings.formattingConfig
         showLineNumbers = settings.showLineNumbers
         syntaxHighlightingEnabled = settings.syntaxHighlightingEnabled
+
+        // Update parser and tokenizer with language-aware keyword tables
+        let keywords = Language.parserKeywords(for: settings.language)
+        parser.parserKeywords = keywords
+        tokenizer.parserKeywords = keywords
     }
 
     // MARK: - Calculation
@@ -104,7 +109,7 @@ class CalculatorViewModel: ObservableObject {
     func loadNotes() {
         notes = storage.loadNotes()
         if notes.isEmpty {
-            notes = [Note(title: "Calculator", content: "")]
+            notes = [Note(title: L10n.string("calculator.defaultTitle"), content: "")]
         }
         let savedIndex = storage.loadCurrentNoteIndex()
         if notes.indices.contains(savedIndex) {

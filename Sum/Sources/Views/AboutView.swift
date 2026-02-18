@@ -10,7 +10,7 @@ struct CreditItem: Identifiable {
 struct AboutView: View {
 
     private var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.4.2"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.5.0"
     }
 
     /// Parsed changelog entries for the scrolling credits
@@ -45,14 +45,14 @@ struct AboutView: View {
                     headerContent
                     Spacer()
 
-                    Text("A natural language calculator")
+                    Text(L10n.string("about.subtitle"))
                         .font(.system(size: 13, weight: .regular, design: .monospaced))
                         .foregroundColor(NumiTheme.dimGreen.opacity(0.7))
                         .padding(.bottom, 32)
                 }
             }
         }
-        .navigationTitle("About")
+        .navigationTitle(L10n.string("about.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(NumiTheme.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -96,7 +96,7 @@ struct AboutView: View {
                 .foregroundColor(NumiTheme.dimGreen)
 
             if showCredits {
-                Text("A natural language calculator")
+                Text(L10n.string("about.subtitle"))
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundColor(NumiTheme.dimGreen.opacity(0.7))
             }
@@ -248,6 +248,7 @@ struct AboutView: View {
 
     static func fallbackCredits() -> [(version: String, items: [CreditItem])] {
         [
+            ("Sum 1.5.0", [CreditItem(text: "Internationalization: Spanish language support", level: .dash)]),
             ("Sum 1.4.2", [CreditItem(text: "UI tweaks & polish", level: .dash)]),
             ("Sum 1.4.1", [CreditItem(text: "Crash fixes, performance, logging, refactoring", level: .dash)]),
             ("Sum 1.4.0", [CreditItem(text: "Natural language queries, smart suggestions", level: .dash)]),

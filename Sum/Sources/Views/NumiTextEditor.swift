@@ -62,7 +62,8 @@ struct NumiTextEditor: UIViewRepresentable {
         uiView.formattingConfig = formattingConfig
         uiView.setShowLineNumbers(showLineNumbers)
 
-        // Keep suggestion engine's variable list up to date
+        // Keep suggestion engine's variable list and language up to date
+        uiView.setLanguage(AppSettings.shared.language)
         let variableNames = results.compactMap { $0.assignmentVariable }
         uiView.updateVariableNames(variableNames)
 
@@ -117,6 +118,7 @@ class NumiTextEditorView: UIView {
 
     // Suggestion engine for autocomplete
     private var suggestionEngine = SuggestionEngine()
+    private var currentLanguage: Language = .english
     private var operatorScrollView: UIScrollView!
     private var suggestionScrollView: UIScrollView!
     private var suggestionStack: UIStackView!
@@ -139,7 +141,7 @@ class NumiTextEditorView: UIView {
 
     private lazy var copiedToast: UILabel = {
         let label = UILabel()
-        label.text = "Copied"
+        label.text = L10n.string("calculator.copied")
         label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = NumiTheme.uiBackground
         label.backgroundColor = NumiTheme.uiTextGreen
@@ -519,6 +521,13 @@ class NumiTextEditorView: UIView {
     /// Updates the variable names available for suggestion
     func updateVariableNames(_ names: [String]) {
         suggestionEngine.updateVariables(names)
+    }
+
+    /// Updates the suggestion engine with localized keywords for the given language
+    func setLanguage(_ language: Language) {
+        guard language != currentLanguage else { return }
+        currentLanguage = language
+        suggestionEngine.setLanguage(language)
     }
 
     // MARK: - Copy to Clipboard
