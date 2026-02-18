@@ -49,6 +49,12 @@
 - English keywords always work regardless of language setting
 - 19 new tests (205 total)
 
+### v1.5.1 — Portuguese Language Support
+- Language picker adds Português (3 languages total)
+- Portuguese parser keywords, unit names, currency names (real/reais → BRL)
+- Full Portuguese UI strings (Configurações, Formatação, Casas Decimais, etc.)
+- 14 new tests (219 total)
+
 ---
 
 ## Upcoming

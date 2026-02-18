@@ -10,7 +10,7 @@ struct CreditItem: Identifiable {
 struct AboutView: View {
 
     private var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.5.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.5.1"
     }
 
     /// Parsed changelog entries for the scrolling credits
@@ -248,6 +248,7 @@ struct AboutView: View {
 
     static func fallbackCredits() -> [(version: String, items: [CreditItem])] {
         [
+            ("Sum 1.5.1", [CreditItem(text: "Portuguese language support", level: .dash)]),
             ("Sum 1.5.0", [CreditItem(text: "Internationalization: Spanish language support", level: .dash)]),
             ("Sum 1.4.2", [CreditItem(text: "UI tweaks & polish", level: .dash)]),
             ("Sum 1.4.1", [CreditItem(text: "Crash fixes, performance, logging, refactoring", level: .dash)]),

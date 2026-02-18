@@ -6,7 +6,7 @@ Inspired by [Numi](https://numi.app/) for macOS.
 
 ## What it does
 
-Sum turns plain English — or Spanish — into live calculations. Write `$200 split 4 ways` and get `$50`. Write `5 km in miles` and get `3.11 mi`. Switch to Spanish and type `5 más 3` or `10 kilómetros en millas`. Every line is evaluated as you type, with results displayed alongside your input.
+Sum turns plain English — or Spanish, or Portuguese — into live calculations. Write `$200 split 4 ways` and get `$50`. Write `5 km in miles` and get `3.11 mi`. Switch to Spanish and type `5 más 3`, or Portuguese and type `10 quilômetros em milhas`. Every line is evaluated as you type, with results displayed alongside your input.
 
 - **Arithmetic** in words or symbols — `8 times 9`, `2 ^ 10`, `17 mod 5`
 - **Unit conversions** across 13 categories — length, weight, temperature, area, volume, time, speed, pressure, energy, data, angle, CSS, and currency
@@ -20,7 +20,7 @@ Sum turns plain English — or Spanish — into live calculations. Write `$200 s
 - **Smart suggestions** — autocomplete chips as you type
 - **Syntax highlighting** — color-coded keywords, functions, variables, and comments
 - **Multiple notes** — separate scratchpads with search
-- **Multi-language** — English and Spanish, with localized keywords, UI, and error messages
+- **Multi-language** — English, Spanish, and Portuguese, with localized keywords, UI, and error messages
 
 For the full feature reference with examples, see the **[Documentation Wiki](https://github.com/sjmcnamara/sum/wiki)**.
 
@@ -99,7 +99,8 @@ Sum/
     CHANGELOG.md                      # Bundled for About screen credits
     en.lproj/Localizable.strings      # English UI strings
     es.lproj/Localizable.strings      # Spanish UI strings
-SumTests/                             # 205 tests
+    pt.lproj/Localizable.strings      # Portuguese UI strings
+SumTests/                             # 219 tests
 ```
 
 ## Architecture
