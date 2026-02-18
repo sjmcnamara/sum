@@ -13,6 +13,11 @@ class AppSettings: ObservableObject {
     private let syntaxHighlightingKey = "org.sum.syntaxHighlighting"
     private let defaultCurrencyKey = "org.sum.defaultCurrency"
     private let languageKey = "org.sum.language"
+    private let hasSeenOnboardingKey = "org.sum.hasSeenOnboarding"
+
+    @Published var hasSeenOnboarding: Bool {
+        didSet { defaults.set(hasSeenOnboarding, forKey: hasSeenOnboardingKey) }
+    }
 
     @Published var useThousandsSeparator: Bool {
         didSet { defaults.set(useThousandsSeparator, forKey: thousandsSeparatorKey) }
@@ -39,6 +44,7 @@ class AppSettings: ObservableObject {
     }
 
     init() {
+        self.hasSeenOnboarding = defaults.object(forKey: hasSeenOnboardingKey) as? Bool ?? false
         self.useThousandsSeparator = defaults.object(forKey: thousandsSeparatorKey) as? Bool ?? true
         let rawPrecision = defaults.object(forKey: decimalPrecisionKey) as? Int ?? -1
         self.decimalPrecision = DecimalPrecision(rawValue: rawPrecision) ?? .auto

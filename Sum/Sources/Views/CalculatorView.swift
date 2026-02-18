@@ -2,10 +2,10 @@ import SwiftUI
 
 struct CalculatorView: View {
     @StateObject private var viewModel = CalculatorViewModel()
+    @ObservedObject private var settings = AppSettings.shared
     @State private var showNotesList = false
     @State private var showSettings = false
     @State private var showCopiedTotal = false
-
 
     var body: some View {
         NavigationStack {
@@ -29,6 +29,23 @@ struct CalculatorView: View {
 
                 if let total = viewModel.grandTotal {
                     grandTotalBar(total)
+                }
+            }
+            .overlay {
+                if !settings.hasSeenOnboarding {
+                    OnboardingOverlayView(
+                        onTryExample: { expression in
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                settings.hasSeenOnboarding = true
+                            }
+                            viewModel.text = expression
+                        },
+                        onDismiss: {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                settings.hasSeenOnboarding = true
+                            }
+                        }
+                    )
                 }
             }
             .background(NumiTheme.background)

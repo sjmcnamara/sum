@@ -21,6 +21,9 @@ Sum turns plain English — or Spanish, or Portuguese — into live calculations
 - **Syntax highlighting** — color-coded keywords, functions, variables, and comments
 - **Multiple notes** — separate scratchpads with search
 - **Multi-language** — English, Spanish, and Portuguese, with localized keywords, UI, and error messages
+- **Onboarding** — first-launch overlay with tappable example cards, tappable placeholder lines
+- **Animated results** — results fade in smoothly and pulse on value changes
+- **Contextual errors** — incompatible units show `kg ≠ °C`, unknown identifiers are named
 
 For the full feature reference with examples, see the **[Documentation Wiki](https://github.com/sjmcnamara/sum/wiki)**.
 
@@ -83,6 +86,7 @@ Sum/
       CalculatorView.swift            # Main UI (green-on-black theme)
       NumiTextEditor.swift            # UITextView wrapper with syntax highlighting
       LineNumberView.swift            # Optional line number gutter
+      OnboardingOverlayView.swift     # First-launch onboarding overlay
       SettingsView.swift              # Formatting, editor, and info settings
       NotesListView.swift             # Note management sheet
       AboutView.swift                 # Version, app icon, and scrolling credits

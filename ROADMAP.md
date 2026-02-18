@@ -55,11 +55,19 @@
 - Full Portuguese UI strings (Configurações, Formatação, Casas Decimais, etc.)
 - 14 new tests (219 total)
 
+### v1.6.0 — Polish & Delight
+- Onboarding overlay with tappable example cards on first launch
+- Tappable placeholder lines that insert expressions into the editor
+- Result appearance animations: fade-in, pulse on change, fade-out
+- Better error messages with context (incompatible units show `kg ≠ °C`, unknown identifiers named)
+- Onboarding localized in all 3 languages
+- 219 tests (unchanged)
+
 ---
 
 ## Upcoming
 
-### v1.6 — Sharing & Export
+### v1.7 — Sharing & Export
 - Share sheet — export a note as plain text or formatted image
 - Copy all results — one-tap copy of the full note with results
 - Import/export notes — share `.sum` files between devices
