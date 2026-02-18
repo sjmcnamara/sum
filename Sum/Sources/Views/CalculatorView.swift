@@ -6,6 +6,7 @@ struct CalculatorView: View {
     @State private var showNotesList = false
     @State private var showSettings = false
     @State private var showCopiedTotal = false
+    @State private var showOnboarding = false
 
     var body: some View {
         NavigationStack {
@@ -32,20 +33,26 @@ struct CalculatorView: View {
                 }
             }
             .overlay {
-                if !settings.hasSeenOnboarding {
+                if showOnboarding {
                     OnboardingOverlayView(
                         onTryExample: { expression in
                             withAnimation(.easeOut(duration: 0.3)) {
-                                settings.hasSeenOnboarding = true
+                                showOnboarding = false
                             }
                             viewModel.text = expression
                         },
                         onDismiss: {
                             withAnimation(.easeOut(duration: 0.3)) {
+                                showOnboarding = false
                                 settings.hasSeenOnboarding = true
                             }
                         }
                     )
+                }
+            }
+            .onAppear {
+                if !settings.hasSeenOnboarding {
+                    showOnboarding = true
                 }
             }
             .background(NumiTheme.background)
