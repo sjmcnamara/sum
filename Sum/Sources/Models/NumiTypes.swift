@@ -160,17 +160,18 @@ struct NumiValue: Equatable {
 
     private func formatDuration(_ seconds: Double, config: FormattingConfig = .default) -> String {
         let totalSeconds = abs(seconds)
+        let words = config.durationWords
         if totalSeconds >= 86400 {
             let days = totalSeconds / 86400
-            return "\(formatNumber(days, config: config)) days"
+            return "\(formatNumber(days, config: config)) \(words.days)"
         } else if totalSeconds >= 3600 {
             let hours = totalSeconds / 3600
-            return "\(formatNumber(hours, config: config)) hours"
+            return "\(formatNumber(hours, config: config)) \(words.hours)"
         } else if totalSeconds >= 60 {
             let mins = totalSeconds / 60
-            return "\(formatNumber(mins, config: config)) minutes"
+            return "\(formatNumber(mins, config: config)) \(words.minutes)"
         }
-        return "\(formatNumber(totalSeconds, config: config)) seconds"
+        return "\(formatNumber(totalSeconds, config: config)) \(words.seconds)"
     }
 
     private func formatScientific(_ n: Double, config: FormattingConfig = .default) -> String {

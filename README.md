@@ -6,7 +6,7 @@ Inspired by [Numi](https://numi.app/) for macOS.
 
 ## What it does
 
-Sum turns plain English into live calculations. Write `$200 split 4 ways` and get `$50`. Write `5 km in miles` and get `3.11 mi`. Every line is evaluated as you type, with results displayed alongside your input.
+Sum turns plain English — or Spanish — into live calculations. Write `$200 split 4 ways` and get `$50`. Write `5 km in miles` and get `3.11 mi`. Switch to Spanish and type `5 más 3` or `10 kilómetros en millas`. Every line is evaluated as you type, with results displayed alongside your input.
 
 - **Arithmetic** in words or symbols — `8 times 9`, `2 ^ 10`, `17 mod 5`
 - **Unit conversions** across 13 categories — length, weight, temperature, area, volume, time, speed, pressure, energy, data, angle, CSS, and currency
@@ -20,6 +20,7 @@ Sum turns plain English into live calculations. Write `$200 split 4 ways` and ge
 - **Smart suggestions** — autocomplete chips as you type
 - **Syntax highlighting** — color-coded keywords, functions, variables, and comments
 - **Multiple notes** — separate scratchpads with search
+- **Multi-language** — English and Spanish, with localized keywords, UI, and error messages
 
 For the full feature reference with examples, see the **[Documentation Wiki](https://github.com/sjmcnamara/sum/wiki)**.
 
@@ -73,6 +74,8 @@ Sum/
       FormattingConfig.swift          # Immutable formatting preferences
       AppSettings.swift               # UserDefaults-backed settings singleton
       Theme.swift                     # Shared color constants (NumiTheme)
+      Language.swift                  # i18n: Language enum + parser keyword tables
+      L10n.swift                      # i18n: UI string localization helper
     Parser/
       Tokenizer.swift                 # Lexer (text -> tokens + highlight ranges)
       NumiParser.swift                # Precedence-climbing expression evaluator
@@ -94,7 +97,9 @@ Sum/
   Resources/
     Assets.xcassets/                   # App icon, accent color, in-app icon image
     CHANGELOG.md                      # Bundled for About screen credits
-SumTests/                             # 186 tests
+    en.lproj/Localizable.strings      # English UI strings
+    es.lproj/Localizable.strings      # Spanish UI strings
+SumTests/                             # 205 tests
 ```
 
 ## Architecture

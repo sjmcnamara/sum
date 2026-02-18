@@ -41,7 +41,7 @@ struct LicenseView: View {
                     .padding(16)
             }
         }
-        .navigationTitle("License")
+        .navigationTitle(L10n.string("license.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(NumiTheme.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

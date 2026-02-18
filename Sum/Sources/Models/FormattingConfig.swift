@@ -9,7 +9,7 @@ enum DecimalPrecision: Int, CaseIterable {
 
     var label: String {
         switch self {
-        case .auto: return "Auto"
+        case .auto: return L10n.string("precision.auto")
         case .two: return "2"
         case .four: return "4"
         case .six: return "6"
@@ -21,9 +21,11 @@ enum DecimalPrecision: Int, CaseIterable {
 struct FormattingConfig {
     let useThousandsSeparator: Bool
     let decimalPrecision: DecimalPrecision
+    var durationWords: DurationWords = .english
 
     static let `default` = FormattingConfig(
         useThousandsSeparator: true,
-        decimalPrecision: .auto
+        decimalPrecision: .auto,
+        durationWords: .english
     )
 }

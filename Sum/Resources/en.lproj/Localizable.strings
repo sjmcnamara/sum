@@ -1,0 +1,40 @@
+/* Settings */
+"settings.title" = "Settings";
+"settings.formatting" = "Formatting";
+"settings.thousandsSeparator" = "Thousands Separator";
+"settings.decimalPlaces" = "Decimal Places";
+"settings.defaultCurrency" = "Default Currency";
+"settings.language" = "Language";
+"settings.editor" = "Editor";
+"settings.lineNumbers" = "Line Numbers";
+"settings.syntaxColors" = "Syntax Colors";
+"settings.info" = "Info";
+"settings.about" = "About";
+"settings.license" = "License";
+"settings.done" = "Done";
+
+/* Calculator */
+"calculator.newNote" = "New Note";
+"calculator.allNotes" = "All Notes";
+"calculator.settings" = "Settings";
+"calculator.total" = "Total";
+"calculator.copied" = "Copied";
+"calculator.defaultTitle" = "Calculator";
+
+/* Notes */
+"notes.title" = "Notes";
+"notes.searchPrompt" = "Search notes";
+"notes.done" = "Done";
+"notes.noteName" = "Note name";
+"notes.rename" = "Rename";
+"notes.delete" = "Delete";
+
+/* About */
+"about.title" = "About";
+"about.subtitle" = "A natural language calculator";
+
+/* License */
+"license.title" = "License";
+
+/* Formatting */
+"precision.auto" = "Auto";
